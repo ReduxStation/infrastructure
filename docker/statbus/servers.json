@@ -1,0 +1,17 @@
+[
+  {
+    "port": 1337,
+    "name": "HippieStation",
+    "local_logs": "/tgstation/data/logs/",
+    "public_logs_url": "https://logs.owo.fm/",
+    "demo_viewer": "https://demo.owo.fm",
+    "webmap": {
+      "tiles": "https://webmap.owo.fm/hippiestation",
+      "main_z": 1,
+      "z_levels": [1, 2, 3],
+      "z_names": ["Station", "Lavaland", "CentCom"],
+      "game_z":  [2, 5, 1]
+    }
+  }
+]
+

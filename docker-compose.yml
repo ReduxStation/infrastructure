@@ -1,0 +1,158 @@
+# HippieStation — Docker Compose
+#
+# Services: mariadb · game (BYOND 516) · statbus (slimbus PHP-FPM) · caddy
+#
+# Quick start:
+#   cp .env.example .env        # fill in MYSQL_ROOT_PASSWORD + MYSQL_PASSWORD
+#   docker compose build
+#   docker compose up -d
+#
+# Ports exposed on the host:
+#   1337      — BYOND game port (clients connect here)
+#   8080      — Statbus web UI  (http://localhost:8080)
+#   3306      — MariaDB         (optional; for local DB tooling)
+
+services:
+
+  # ── Database ─────────────────────────────────────────────────────────────
+  mariadb:
+    build:
+      context: .
+      dockerfile: docker/mariadb/Dockerfile
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD in .env}
+      MYSQL_DATABASE: ss13
+      MYSQL_USER: ss13
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?set MYSQL_PASSWORD in .env}
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    ports:
+      - "${MARIADB_PORT:-3306}:3306"
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  # ── BYOND game server ─────────────────────────────────────────────────────
+  game:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    restart: unless-stopped
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    ports:
+      - "${GAME_PORT:-1337}:1337/tcp"
+      - "${GAME_PORT:-1337}:1337/udp"
+    environment:
+      MYSQL_HOST: mariadb
+      MYSQL_USER: ss13
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      # Config folder bind-mounted directly — any edits on the host are
+      # reflected immediately, and picked up when DreamDaemon next restarts.
+      - ./config:/tgstation/config
+      - game_data:/tgstation/data
+
+  # ── Statbus (slimbus PHP-FPM) ─────────────────────────────────────────────
+  statbus:
+    build:
+      context: .
+      dockerfile: docker/statbus/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    environment:
+      DB_METHOD: mysql
+      DB_DATABASE: ss13
+      DB_USERNAME: ss13
+      DB_PASSWORD: ${MYSQL_PASSWORD}
+      DB_HOST: mariadb
+      DB_PORT: "3306"
+      DB_PREFIX: "SS13_"
+      ALT_DB_METHOD: mysql
+      ALT_DB_DATABASE: statbus
+      ALT_DB_USERNAME: ss13
+      ALT_DB_PASSWORD: ${MYSQL_PASSWORD}
+      ALT_DB_HOST: mariadb
+      ALT_DB_PORT: "3306"
+      APP: "${STATBUS_APP:-HippieStation Statbus}"
+      GITHUB: "${GITHUB:-HippieStation/HippieStation}"
+      DEBUG: "FALSE"
+      DISPLAY_ERRORS: "FALSE"
+    volumes:
+      # servers.json tells slimbus which game port(s) to track
+      - ./docker/statbus/servers.json:/var/www/html/src/conf/servers.json:ro
+      # Game logs mounted read-only so LogsController can read them directly
+      - game_data:/tgstation/data:ro
+
+  # ── Webmap tile renderer ──────────────────────────────────────────────────
+  #
+  # Runs ONCE on `docker-compose up`, writes XYZ tile pyramid to webmap_tiles
+  # volume, then exits.  Caddy picks up those tiles at webmap.owo.fm.
+  #
+  # To force a re-render after a map update:
+  #   docker volume rm <project>_webmap_tiles
+  #   docker-compose up webmap-renderer
+  webmap-renderer:
+    build:
+      context: .
+      dockerfile: docker/webmap/Dockerfile
+    restart: "no"
+    volumes:
+      # Full repo bind-mounted read-only — dmm-tools needs icons + code + DMM
+      - .:/src:ro
+      # Tile output shared with Caddy
+      - webmap_tiles:/tiles
+
+  # ── Demo viewer builder ───────────────────────────────────────────────────
+  #
+  # Clones Nova-HippieStation/demo-viewer, patches it, and builds a static
+  # bundle into the demo_viewer_dist volume.  Runs once and exits; Caddy
+  # picks up those files at demo.owo.fm.
+  #
+  # To force a rebuild after upstream changes:
+  #   docker-compose build demo-viewer-builder
+  #   docker volume rm <project>_demo_viewer_dist
+  #   docker-compose up demo-viewer-builder
+  demo-viewer-builder:
+    build:
+      context: .
+      dockerfile: docker/demo-viewer/Dockerfile
+    restart: "no"
+    volumes:
+      - demo_viewer_dist:/dist
+
+  # ── Caddy (reverse proxy + auto-HTTPS for statbus) ───────────────────────
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - statbus
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./slimbus/public:/var/www/html/public:ro
+      - caddy_data:/data
+      - caddy_certs:/config
+      # Game logs served publicly at logs.owo.fm
+      - game_data:/tgstation/data:ro
+      # Pre-rendered map tiles served at webmap.owo.fm
+      - webmap_tiles:/srv/webmap:ro
+      # Built demo viewer SPA served at demo.owo.fm
+      - demo_viewer_dist:/srv/demo-viewer:ro
+
+volumes:
+  mariadb_data:
+  game_data:
+  caddy_data:
+  caddy_certs:
+  webmap_tiles:
+  demo_viewer_dist:
