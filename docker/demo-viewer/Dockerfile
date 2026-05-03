@@ -6,14 +6,14 @@ RUN apk add --no-cache git
 WORKDIR /build
 
 # Clone our fork at build time so the image always ships the latest commits.
-RUN git clone --depth=1 https://github.com/Nova-HippieStation/demo-viewer.git .
+RUN git clone --depth=1 https://github.com/ResurgenceStation/demo-viewer.git .
 
 # Point the CNAME at our domain.
 RUN echo "demo.owo.fm" > CNAME
 
 # The text parser hardcodes the upstream Yogstation repo when fetching CSS/icons
 # from jsDelivr.  Repoint it to our game repository so icons load correctly.
-RUN sed -i 's|repo: "yogstation13/Yogstation"|repo: "Nova-HippieStation/NovaHippieStation"|g' \
+RUN sed -i 's|repo: "yogstation13/Yogstation"|repo: "ResurgenceStation/ResurgenceStation"|g' \
         src/parser/text_parser.ts
 
 RUN npm ci && npm run build

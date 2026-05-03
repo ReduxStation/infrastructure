@@ -112,7 +112,7 @@ services:
 
   # ── Demo viewer builder ───────────────────────────────────────────────────
   #
-  # Clones Nova-HippieStation/demo-viewer, patches it, and builds a static
+  # Clones ResurgenceStation/demo-viewer, patches it, and builds a static
   # bundle into the demo_viewer_dist volume.  Runs once and exits; Caddy
   # picks up those files at demo.owo.fm.
   #
