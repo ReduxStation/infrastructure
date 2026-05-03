@@ -6,12 +6,18 @@ set -euo pipefail
 
 SCHEMA=/docker-entrypoint-schemas
 
-# ── Create statbus database and grant the game user access ────────────────────
+# ── Create ancillary databases and grant the game user access ─────────────────
 mysql -u root -p"${MYSQL_ROOT_PASSWORD}" <<SQL
 CREATE DATABASE IF NOT EXISTS statbus
     CHARACTER SET utf8mb4
     COLLATE utf8mb4_unicode_ci;
 GRANT ALL PRIVILEGES ON statbus.* TO '${MYSQL_USER}'@'%';
+
+CREATE DATABASE IF NOT EXISTS tgs
+    CHARACTER SET utf8mb4
+    COLLATE utf8mb4_unicode_ci;
+GRANT ALL PRIVILEGES ON tgs.* TO '${MYSQL_USER}'@'%';
+
 FLUSH PRIVILEGES;
 SQL
 

@@ -1,6 +1,6 @@
-# HippieStation — Docker Compose
+# ResurgenceStation — Docker Compose
 #
-# Services: mariadb · game (BYOND 516) · statbus (slimbus PHP-FPM) · caddy
+# Services: mariadb · tgs (TGStation Server) · statbus (slimbus PHP-FPM) · caddy
 #
 # Quick start:
 #   cp .env.example .env        # fill in MYSQL_ROOT_PASSWORD + MYSQL_PASSWORD
@@ -9,7 +9,7 @@
 #
 # Ports exposed on the host:
 #   1337      — BYOND game port (clients connect here)
-#   8080      — Statbus web UI  (http://localhost:8080)
+#   5000      — TGS web panel  (configure instances, watchdog, chat bots)
 #   3306      — MariaDB         (optional; for local DB tooling)
 
 services:
@@ -35,28 +35,35 @@ services:
       timeout: 5s
       retries: 30
 
-  # ── BYOND game server ─────────────────────────────────────────────────────
-  game:
+  # ── TGStation Server (manages BYOND, hot-swap, watchdog, chat bots) ─────────
+  tgs:
     build:
       context: .
-      dockerfile: Dockerfile
-      target: runtime
+      dockerfile: docker/tgs/Dockerfile
+    init: true
     restart: unless-stopped
+    cap_add:
+      - SYS_NICE
+      - SYS_RESOURCE
     depends_on:
       mariadb:
         condition: service_healthy
     ports:
       - "${GAME_PORT:-1337}:1337/tcp"
       - "${GAME_PORT:-1337}:1337/udp"
+      - "5000:5000"
     environment:
-      MYSQL_HOST: mariadb
-      MYSQL_USER: ss13
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      # Password injected at runtime — never stored in the image or this file.
+      Database__ConnectionString: "Server=mariadb;Port=3306;Database=tgs;Uid=ss13;Pwd=${MYSQL_PASSWORD:?set MYSQL_PASSWORD in .env};"
+      Database__DatabaseType: MariaDB
+      Database__ServerVersion: "10.11.0"
     volumes:
-      # Config folder bind-mounted directly — any edits on the host are
-      # reflected immediately, and picked up when DreamDaemon next restarts.
-      - ./config:/tgstation/config
+      - ./docker/tgs/appsettings.Production.yml:/config_data/appsettings.Production.yml:ro
+      # Static game config bind-mounted into the TGS instance so edits are live.
+      - ./config:/tgs_instances/ResurgenceStation/Configuration/GameStaticFiles/config:ro
       - game_data:/tgstation/data
+      - tgs_instances:/tgs_instances
+      - tgs_logs:/tgs_logs
 
   # ── Statbus (slimbus PHP-FPM) ─────────────────────────────────────────────
   statbus:
@@ -152,6 +159,8 @@ services:
 volumes:
   mariadb_data:
   game_data:
+  tgs_instances:
+  tgs_logs:
   caddy_data:
   caddy_certs:
   webmap_tiles:
