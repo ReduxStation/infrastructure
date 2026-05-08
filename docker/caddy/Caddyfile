@@ -1,3 +1,7 @@
+tgs.owo.fm {
+    reverse_proxy tgs:5000
+}
+
 stats.owo.fm {
     root * /var/www/html/public
 

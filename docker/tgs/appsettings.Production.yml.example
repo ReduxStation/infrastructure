@@ -1,0 +1,19 @@
+# TGS production configuration example.
+# Copy to appsettings.Production.yml alongside the container.
+# The Database connection string is overridden at runtime by the
+# Database__ConnectionString environment variable in docker-compose.yml
+# so no password is ever stored in this file.
+General:
+  ConfigVersion: "5.9.0"
+  ValidInstancePaths:
+    - /tgs_instances
+
+Database:
+  DatabaseType: MariaDB
+  ServerVersion: "10.11.0"
+  ConnectionString: "Server=mariadb;Port=3306;Database=tgs;Uid=ss13;Pwd=CHANGE_ME;"
+
+Kestrel:
+  Endpoints:
+    Http:
+      Url: "http://0.0.0.0:5000"
