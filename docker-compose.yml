@@ -59,8 +59,6 @@ services:
       Database__ServerVersion: "10.11.0"
     volumes:
       - ./docker/tgs/appsettings.Production.yml:/config_data/appsettings.Production.yml:ro
-      # Static game config bind-mounted into the TGS instance so edits are live.
-      - ./config:/tgs_instances/ResurgenceStation/Configuration/GameStaticFiles/config:ro
       - game_data:/tgstation/data
       - tgs_instances:/tgs_instances
       - tgs_logs:/tgs_logs
