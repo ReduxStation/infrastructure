@@ -100,27 +100,40 @@ Should show `-> /tgstation/data/logs`. If it shows a real directory instead, run
 docker exec <tgs_container> /tgs_instances/<instance>/Configuration/EventScripts/PreStartup /tgs_instances/<instance>/Game/Live
 ```
 
+### "libbyond.so: undefined symbol: log_write" (or similar) at world.New()
+
+```
+Runtime in code/__HELPERS/_logging.dm, line 174:
+/tgs_instances/.../Byond/<ver>/byond/bin/libbyond.so: undefined symbol: log_write
+proc name: log world (/proc/log_world)
+src: null
+call stack:
+log world("World loaded at HH:MM:SS!")
+world: New()
+```
+
+BYOND's `call_ext()` resolution checks the game working directory under several name variants (bare, `.so`, `lib-` prefix) and the BYOND install's own `bin/` directory before falling back to `LD_LIBRARY_PATH` and the `ldconfig` cache. When none of those satisfy, dlopen fails and BYOND reports the error as if `libbyond.so` itself has an undefined symbol. The misleading message blamed `libbyond.so` even though the real problem was that the rust_g binary was only at `/usr/local/lib/{rust_g,librust_g}.so` and missing from every other path BYOND checks first.
+
+Fixed by extending PostCompile to scatter every native lib (`librust_g.so`, `libBSQL.so`, `libquickwrite.so`) to all four location families:
+
+| Family | Variants written |
+|---|---|
+| Game working dir (`$1`) | `<BASE>`, `<BASE>.so`, `lib<BASE>.so` |
+| `/usr/local/lib` | `<BASE>.so`, `lib<BASE>.so` |
+| `/usr/lib/i386-linux-gnu` | `<BASE>.so`, `lib<BASE>.so` |
+| BYOND `bin/` (read from `Byond/ActiveVersion.txt`) | `<BASE>`, `<BASE>.so`, `lib<BASE>.so` |
+
+The current `tools/tgs4_scripts/PostCompile.sh` does this. If you see the runtime, install the latest PostCompile and run it manually for the active Game/Live, then restart the watchdog so DD re-dlopens fresh.
+
 ### "BSQL library failed to provide connect operation for connection id (MySql)"
 
-The PostCompile script did not run, or `/usr/local/lib` is missing one or more of the native libraries. Check:
+Same root cause as the `log_write` runtime above (BYOND's `call_ext` dlopen chain not finding the lib in the path it checks first). Same fix: install the latest PostCompile, run it for Game/Live, restart the watchdog. To verify after install:
 
 ```bash
 docker exec <tgs_container> ldconfig -p | grep -iE "BSQL|rust_g|quickwrite"
 ```
 
-You should see all three. If not, ensure `Configuration/EventScripts/PostCompile` exists and is executable, then redeploy. As a one-shot manual fix, you can scatter from the live game dir directly:
-
-```bash
-docker exec <tgs_container> sh -c '
-  GAME_DIR=/tgs_instances/<instance>/Game/Live
-  cp $GAME_DIR/rust_g /usr/local/lib/librust_g.so
-  cp $GAME_DIR/libBSQL.so /usr/local/lib/libBSQL.so
-  cp $GAME_DIR/libquickwrite.so /usr/local/lib/libquickwrite.so
-  ldconfig
-'
-```
-
-Then restart the watchdog from the **Server** tab so DreamDaemon re-dlopens the libs fresh.
+You should see all three. If not, ensure `Configuration/EventScripts/PostCompile` exists and is executable, then redeploy.
 
 ### "DMAPI interop version is less than tgstation-server's version"
 
