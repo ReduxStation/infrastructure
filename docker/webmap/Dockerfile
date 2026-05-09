@@ -8,7 +8,7 @@
 # How it works in docker-compose:
 #   1. docker-compose build webmap-renderer     (compiles dmm-tools — ~10 min once)
 #   2. docker-compose up webmap-renderer        (renders tiles → /tiles volume)
-#   3. Caddy serves the tiles at webmap.owo.fm
+#   3. Caddy serves the tiles at tiles.owo.fm (consumed by webmap.owo.fm)
 #
 # Force a re-render after a map change:
 #   docker-compose run --rm webmap-renderer     (volume already exists → skips)
@@ -43,7 +43,11 @@ COPY --from=dmm-builder /spacedmm/target/release/dmm-tools /usr/local/bin/dmm-to
 # tile.py: slices each flat PNG into a Leaflet XYZ tile pyramid
 COPY docker/webmap/tile.py /tile.py
 
-# render.sh: orchestrates dmm-tools → tile.py, skips if tiles already exist
+# extract_objects.py: builds objects.json (BYOND-coord-keyed metadata) for
+# the interactive viewer at webmap.owo.fm
+COPY docker/webmap/extract_objects.py /extract_objects.py
+
+# render.sh: orchestrates dmm-tools → tile.py + extract_objects.py
 COPY docker/webmap/render.sh /render.sh
 RUN chmod +x /render.sh
 

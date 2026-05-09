@@ -62,19 +62,32 @@ demo.owo.fm {
     header Access-Control-Allow-Origin "*"
 }
 
-webmap.owo.fm {
-    root * /srv/webmap
+# Raw map tile pyramid (PNGs). Consumed by webmap.owo.fm and statbus.
+tiles.owo.fm {
+    root * /srv/tiles
 
     # Tiles are immutable once rendered — browsers can cache for a week.
     header Cache-Control "public, max-age=604800, immutable"
 
-    # Allow cross-origin requests so Leaflet can load tiles from a different
-    # origin than stats.owo.fm.
+    # Allow cross-origin requests so webmap.owo.fm and stats.owo.fm can
+    # load tiles from a different origin.
     header Access-Control-Allow-Origin "*"
 
     file_server
 
     # Return a friendly 404 for missing tiles rather than a Caddy error page.
+    handle_errors {
+        respond "{http.error.status_code} {http.error.status_text}" {http.error.status_code}
+    }
+}
+
+# Interactive map viewer — Leaflet UI on top of tiles.owo.fm with hover-to-
+# examine, click-to-pin, search, and category layer filters.
+webmap.owo.fm {
+    root * /srv/webmap-site
+    file_server
+    try_files {path} /index.html
+
     handle_errors {
         respond "{http.error.status_code} {http.error.status_text}" {http.error.status_code}
     }
