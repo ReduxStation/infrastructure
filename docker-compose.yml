@@ -167,10 +167,6 @@ services:
       - webmap_tiles:/srv/webmap:ro
       # Built demo viewer SPA served at demo.owo.fm
       - demo_viewer_dist:/srv/demo-viewer:ro
-      # Stub serverinfo.json served on the docker network at :8081 for the
-      # parser's ongoing-round-protection. Replaced by a live file from a
-      # DMAPI event script in Phase 4.
-      - ./docker/log-parser/serverinfo.json:/srv/serverinfo/serverinfo.json:ro
 
 volumes:
   mariadb_data:
