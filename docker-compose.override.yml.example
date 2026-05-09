@@ -2,8 +2,8 @@
 #
 # Compose merges this file into docker-compose.yml automatically. Use it for
 # anything that's specific to one deployment (extra reverse-proxied sites,
-# extra services, environment overrides) so the upstream compose file stays
-# generic and `git pull` never produces conflicts.
+# env overrides) so the upstream compose file stays generic and `git pull`
+# never produces conflicts.
 #
 # Quick start:
 #   1. Copy this file to docker-compose.override.yml.
@@ -11,56 +11,38 @@
 #      They get mounted at /etc/caddy/sites.d/ inside the caddy container, where
 #      the main Caddyfile's `import /etc/caddy/sites.d/*.caddy` line picks
 #      them up.
-#   3. If you don't need a custom service (the pokelab block below) or the
-#      TGS panel env overrides, delete that section entirely.
-#   4. `docker compose up -d caddy`  — Caddy validates+reloads as part of
-#      normal startup. The override is just additive YAML; nothing else
-#      needs to know about it.
+#   3. Delete sections you don't need (e.g. if you don't run the bundled TGS
+#      control panel, drop the `tgs:` block).
+#   4. `docker compose up -d caddy` — the override is just additive YAML;
+#      Caddy validates on start and reloads.
 #
-# Files in this template:
-#   - docker-compose.override.yml.example  (this file)  — git-tracked template
-#   - docker-compose.override.yml          (real)       — git-ignored
-#   - caddy-sites.d/*.caddy                (real)       — git-ignored, one
-#                                                          per site you want
-#                                                          mounted
-#   - docker/pokelab/Dockerfile.example                 — git-tracked template
-#                                                          for the optional
-#                                                          PHP-FPM site
+# Tracked vs ignored:
+#   docker-compose.override.yml.example   git-tracked (this file)
+#   docker-compose.override.yml           git-ignored (your real one)
+#   caddy-sites.d/*.caddy                 git-ignored (your site snippets)
+#
+# Reverse-proxying to a service that lives in a SEPARATE docker-compose stack
+# on the same host (e.g. an unrelated personal project hosted off the same
+# domain): give that other stack a network alias on this stack's default
+# network, then have your caddy-sites.d/<site>.caddy reverse_proxy to that
+# alias. Don't add the foreign service as a block here — it should stay in
+# its own compose file with its own lifecycle.
 
 services:
 
-  # Mount a host directory of *.caddy snippets at /etc/caddy/sites.d/
-  # so `import /etc/caddy/sites.d/*.caddy` in the canonical Caddyfile
-  # picks them up. Each *.caddy file should contain one site block.
+  # Mount a host directory of *.caddy snippets at /etc/caddy/sites.d/ so
+  # `import /etc/caddy/sites.d/*.caddy` in the canonical Caddyfile picks
+  # them up. Each *.caddy file is one site block.
   caddy:
     volumes:
       - ./caddy-sites.d:/etc/caddy/sites.d:ro
-      # If your site needs to serve static files (e.g. a PHP site under
-      # /var/www/<name>), bind-mount the docroot here too:
-      # - ./WWW:/var/www/pokelab:ro
 
-  # Example: TGS panel env overrides. Delete this whole block if you do
+  # Optional: TGS panel env overrides. Delete this whole block if you do
   # not run the bundled control panel or do not need the cross-origin flag.
   tgs:
     environment:
-      # Serve the bundled web control panel at https://panel.owo.fm/
+      # Serve the bundled web control panel at the panel hostname
       # (default in the upstream image is false, which only ships the API).
       ControlPanel__Enable: "true"
       # Allow the panel JS to call the API across origins.
       ControlPanel__AllowAnyOrigin: "true"
-
-  # Example: extra PHP-FPM container that the master Caddy reverse-proxies
-  # for one of your sites. Delete this whole block if you do not need it.
-  pokelab:
-    build:
-      context: .
-      dockerfile: docker/pokelab/Dockerfile
-    restart: unless-stopped
-    volumes:
-      - ./WWW:/var/www/pokelab
-      - pokelab_db:/var/www/pokelab-data
-
-volumes:
-  # Only declared if you actually run the pokelab service above; remove
-  # this block too if you deleted the service.
-  pokelab_db:
