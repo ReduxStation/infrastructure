@@ -12,20 +12,33 @@ stats.owo.fm {
 logs.owo.fm {
     root * /srv/logs/logs
 
-    # File requests (the .log/.json/.html/.txt content of each round) go through
-    # the public-log-parser service which scrubs IPs, CIDs, and admin-private
-    # content, and 404s files in rounds that are still in progress. The parser
-    # also gates the per-file allowlist (sql.log, hrefs.log, etc. 404 by name).
+    # Defence-in-depth path whitelist. Only requests that match the canonical
+    # log layout (`/`, `/YYYY`, `/YYYY/MM`, `/YYYY/MM/DD`, `/YYYY/MM/DD/round-N`,
+    # or `/YYYY/MM/DD/round-N/<filename>`) reach the parser or file_server.
+    # Anything else (probes for `/admin.php`, `/.env`, traversal, random
+    # paths) gets an explicit 404 before any file system access.
+    @log_path path_regexp ^(/|/[0-9]{4}(/|/[0-9]{2}(/|/[0-9]{2}(/|/round-[0-9]+(/|/[A-Za-z0-9._-]+)?)?)?)?)?$
     @file_exists file
-    handle @file_exists {
-        reverse_proxy log-parser:8090
+
+    handle @log_path {
+        # File requests go through the public-log-parser service which scrubs
+        # IPs, CIDs, and admin-private content, 404s files in rounds that are
+        # still in progress, and gates the per-file allowlist (sql.log,
+        # hrefs.log, etc. 404 by name).
+        handle @file_exists {
+            reverse_proxy log-parser:8090
+        }
+        # Directory requests (year/month/day/round-N tree plus /) are served
+        # straight from the volume by Caddy's file_server browse so users get
+        # the built-in directory UI rather than the parser's stub HTML.
+        handle {
+            file_server browse
+        }
     }
 
-    # Directory requests (the year/month/day/round-N tree, plus /) are served
-    # straight from the volume by Caddy's file_server browse so users get the
-    # built-in directory UI rather than the parser's stub HTML.
+    # Anything that did not match the whitelist.
     handle {
-        file_server browse
+        respond 404
     }
 
     # Allow the demo viewer (demo.owo.fm) to fetch demo.log files cross-origin.
