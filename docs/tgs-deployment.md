@@ -76,11 +76,40 @@ docker exec -e MPW="$MYSQL_ROOT_PASSWORD" <mariadb_container> \
 
 ## Per-deploy workflow
 
-Once the first-time setup is done, deploys are driven entirely from the TGS panel:
+In normal operation, every PR merged into `master` triggers a full deploy automatically through the `TGS auto-deploy` GitHub Actions workflow at `.github/workflows/tgs-auto-deploy.yml`. The workflow:
+
+1. Logs into the TGS HTTP API at `panel.owo.fm/api/` with the `TGS_USERNAME` / `TGS_PASSWORD` repository secrets.
+2. `POST /api/Repository {"updateFromOrigin": true}` — pulls the new HEAD on the live instance.
+3. `PUT /api/DreamMaker` — queues a fresh compile.
+4. TGS runs the PostCompile script (scatters native libs), validates the new build, and hot-swaps the watchdog. The running round is unaffected; the next round runs the new code.
+
+PRs that have NOT been merged stay testable through TGS's **Test Merge** feature on the panel.
+
+Required repository secrets (set under `Settings → Secrets and variables → Actions`):
+
+| Secret | Value |
+|---|---|
+| `TGS_URL` | `https://panel.owo.fm` |
+| `TGS_USERNAME` | name of a TGS user with the perms below |
+| `TGS_PASSWORD` | password for that user |
+| `TGS_INSTANCE_ID` | numeric instance id (visible as `(N)` after the instance name in the panel header) |
+
+That TGS user needs the minimum perm set:
+
+- **Repository → Update Branch** (so the workflow can fetch origin and reset to master).
+- **Deployment → Create Deployment** (so the workflow can queue a compile).
+
+Nothing else. Granting more is harmless but unnecessary; granting less makes the workflow 403 on either step. The whoami probe in the workflow will dump the user's effective perms in the run log if anything misroutes.
+
+### Manual deploy fallback
+
+If the auto-deploy workflow is broken or the user wants to deploy without merging (e.g. during incident response), the panel still works the same way it always did:
 
 1. **Repository tab** → Reset/Update from Remote (pulls the latest master).
 2. **Deployment tab** → Deploy. TGS clones, runs DreamMaker, runs PostCompile to scatter native libs, then hot-swaps the game.
 3. Watch the **Jobs** tab for the compile and watchdog launch.
+
+You can also run the workflow on demand from the GitHub UI (Actions → TGS auto-deploy → Run workflow) without merging anything, since the workflow has `workflow_dispatch:` enabled.
 
 The `~/apply-customizations.sh` script on the live owo.fm server takes care of post-pull Caddyfile customizations (the `panel.owo.fm` rename and the pokelabs block) on each `git pull`. It is not part of TGS's flow and only matters if you are manually pulling on the host outside of TGS.
 
