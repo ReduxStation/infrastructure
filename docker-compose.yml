@@ -188,7 +188,9 @@ services:
 
   # ── Caddy (reverse proxy + auto-HTTPS for statbus) ───────────────────────
   caddy:
-    image: caddy:2-alpine
+    build:
+      context: .
+      dockerfile: docker/caddy/Dockerfile
     restart: unless-stopped
     depends_on:
       - statbus

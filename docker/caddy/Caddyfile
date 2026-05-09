@@ -1,4 +1,4 @@
-tgs.owo.fm {
+panel.owo.fm {
     reverse_proxy tgs:5000
 }
 
@@ -102,3 +102,14 @@ webmap.owo.fm {
         respond "{http.error.status_code} {http.error.status_text}" {http.error.status_code}
     }
 }
+
+# Server-local site definitions (e.g. extra hostnames a particular operator
+# wants to reverse-proxy alongside the standard ones). Files matching
+# /etc/caddy/sites.d/*.caddy are loaded as additional top-level config.
+# The directory is created in the caddy image so this import is always safe;
+# if no override files are mounted in, the glob expands to nothing and Caddy
+# happily proceeds with just the canonical sites above.
+#
+# Operators add server-only sites via docker-compose.override.yml mounting a
+# host directory at /etc/caddy/sites.d/ (see docker-compose.override.yml.example).
+import /etc/caddy/sites.d/*.caddy
