@@ -12,24 +12,26 @@ After standing up TGS and the supporting containers (mariadb, statbus, caddy, et
 
 ### 2. Install the TGS event scripts
 
-Two scripts in `tools/tgs4_scripts/` need to be copied into the TGS instance volume:
+Four scripts in `tools/tgs4_scripts/` need to be copied into the TGS instance volume:
 
 | Script | Installs as | Purpose |
 |---|---|---|
 | `PostCompile.sh` | `Configuration/EventScripts/PostCompile` | Scatters `librust_g.so`, `libBSQL.so`, `libquickwrite.so` into `/usr/local/lib` after each compile. Without this, DB connections fail with "BSQL library failed to provide connect operation". |
-| `PreStartup.sh` | `Configuration/EventScripts/PreStartup` | Symlinks the active game's `data/logs` directory to the persistent `/tgstation/data/logs` mount. Without this, new round logs do not appear at `logs.owo.fm`. |
+| `PreStartup.sh` | `Configuration/EventScripts/PreStartup` | Symlinks the active game's `data/logs` directory to the persistent `/tgstation/data/logs` mount. Without this, new round logs do not appear at `logs.owo.fm`. Also seeds `/tgstation/data/serverinfo.json` so the log-parser does not block all rounds on a brand new deploy. |
+| `RoundStart.sh` | `Configuration/EventScripts/RoundStart` | Receives the new round's id from the game via `TgsTriggerEvent("RoundStart", ...)` and writes it into `/tgstation/data/serverinfo.json`. The public-log-parser polls this file and 404s the active round's directory until `RoundEnd` fires. |
+| `RoundEnd.sh` | `Configuration/EventScripts/RoundEnd` | Receives the ended round's id and clears `/tgstation/data/serverinfo.json` so the log-parser stops hiding it. |
 
 The compile pipeline drops the native libs into the freshly built game directory, but BYOND's i386 process searches `/usr/local/lib` and the `ldconfig` cache, NOT the game directory. PostCompile fixes that.
 
 The game writes round logs relative to its working directory under `Game/<uuid>/data/logs/`. Caddy serves logs from the `game_data` volume mounted at `/tgstation/data/logs`. PreStartup bridges the two with a symlink.
 
-Install both at once. From a host with Docker access:
+Install all four at once. From a host with Docker access:
 
 ```bash
 INSTANCE=ResurgenceStation
 INSTANCE_VOL=resurgencestation_tgs_instances
 REPO_DIR=~/ResurgenceStation
-for SCRIPT in PostCompile PreStartup; do
+for SCRIPT in PostCompile PreStartup RoundStart RoundEnd; do
   docker run --rm \
     -v "$REPO_DIR/tools/tgs4_scripts":/src:ro \
     -v "$INSTANCE_VOL":/v \
