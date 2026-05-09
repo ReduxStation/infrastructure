@@ -6,7 +6,7 @@ address = "0.0.0.0:8090"
 
 # Log root inside the container. The host's game_data volume is mounted here
 # read-only by docker-compose.
-raw_logs_path = "/logs"
+raw_logs_path = "/logs/logs"
 
 [ongoing_round_protection]
 # A static stub served by caddy on its internal :8081 site. Returns
