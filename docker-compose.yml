@@ -135,6 +135,16 @@ services:
     volumes:
       - demo_viewer_dist:/dist
 
+  # ── Public log parser (scrubs IPs/CIDs/ADMINPRIVATE, hides ongoing rounds) ─
+  log-parser:
+    image: ghcr.io/resurgencestation/public-log-parser:latest
+    restart: unless-stopped
+    depends_on:
+      - caddy
+    volumes:
+      - ./docker/log-parser/config.toml:/app/config.toml:ro
+      - game_data:/logs:ro
+
   # ── Caddy (reverse proxy + auto-HTTPS for statbus) ───────────────────────
   caddy:
     image: caddy:2-alpine
@@ -149,12 +159,15 @@ services:
       - ./slimbus/public:/var/www/html/public:ro
       - caddy_data:/data
       - caddy_certs:/config
-      # Game logs served publicly at logs.owo.fm
-      - game_data:/tgstation/data:ro
+      # log-parser reads round files from this volume; caddy no longer file_serves it.
       # Pre-rendered map tiles served at webmap.owo.fm
       - webmap_tiles:/srv/webmap:ro
       # Built demo viewer SPA served at demo.owo.fm
       - demo_viewer_dist:/srv/demo-viewer:ro
+      # Stub serverinfo.json served on the docker network at :8081 for the
+      # parser's ongoing-round-protection. Replaced by a live file from a
+      # DMAPI event script in Phase 4.
+      - ./docker/log-parser/serverinfo.json:/srv/serverinfo/serverinfo.json:ro
 
 volumes:
   mariadb_data:

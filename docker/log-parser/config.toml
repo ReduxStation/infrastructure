@@ -1,0 +1,15 @@
+# tg-public-log-parser configuration for the owo.fm deployment.
+# Mounted into the log-parser container at /app/config.toml.
+
+# Bind on all interfaces inside the docker network so caddy can reverse-proxy.
+address = "0.0.0.0:8090"
+
+# Log root inside the container. The host's game_data volume is mounted here
+# read-only by docker-compose.
+raw_logs_path = "/logs"
+
+[ongoing_round_protection]
+# A static stub served by caddy on its internal :8081 site. Returns
+# {"servers": []} until the DMAPI bridge (Phase 4) replaces it with a
+# live-updated file written on round start/end events.
+serverinfo = "http://caddy:8081/serverinfo.json"
