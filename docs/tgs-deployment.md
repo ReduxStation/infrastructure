@@ -10,29 +10,34 @@ After standing up TGS and the supporting containers (mariadb, statbus, caddy, et
 
 `dependencies.sh` declares `BYOND_MAJOR=516, BYOND_MINOR=1680`. The TGS Engine tab must install and activate this exact build. Newer builds (e.g. 516.1681 and later) have a regressed lexer that rejects integer-suffix CSS time units like `1500ms` inside DM multi-line strings. Sticking to 1680 keeps `interface/stylesheet.dm` compiling.
 
-### 2. Install the PostCompile event script
+### 2. Install the TGS event scripts
 
-After every successful compile, the game expects three native libraries (`librust_g.so`, `libBSQL.so`, `libquickwrite.so`) to be findable by `dlopen()`. The compile pipeline drops them into the freshly built game directory, but BYOND's i386 process searches `/usr/local/lib` and the `ldconfig` cache, NOT the game directory. A TGS PostCompile event script copies them into place and refreshes the cache.
+Two scripts in `tools/tgs4_scripts/` need to be copied into the TGS instance volume:
 
-Copy `tools/tgs4_scripts/PostCompile.sh` to `<TGS instance dir>/Configuration/EventScripts/PostCompile` and make it executable. From a host with Docker access:
+| Script | Installs as | Purpose |
+|---|---|---|
+| `PostCompile.sh` | `Configuration/EventScripts/PostCompile` | Scatters `librust_g.so`, `libBSQL.so`, `libquickwrite.so` into `/usr/local/lib` after each compile. Without this, DB connections fail with "BSQL library failed to provide connect operation". |
+| `PreStartup.sh` | `Configuration/EventScripts/PreStartup` | Symlinks the active game's `data/logs` directory to the persistent `/tgstation/data/logs` mount. Without this, new round logs do not appear at `logs.owo.fm`. |
+
+The compile pipeline drops the native libs into the freshly built game directory, but BYOND's i386 process searches `/usr/local/lib` and the `ldconfig` cache, NOT the game directory. PostCompile fixes that.
+
+The game writes round logs relative to its working directory under `Game/<uuid>/data/logs/`. Caddy serves logs from the `game_data` volume mounted at `/tgstation/data/logs`. PreStartup bridges the two with a symlink.
+
+Install both at once. From a host with Docker access:
 
 ```bash
-docker run --rm \
-  -v "$REPO_DIR/tools/tgs4_scripts":/src:ro \
-  -v <tgs_instances_volume>:/v \
-  alpine sh -c "cp /src/PostCompile.sh /v/<instance_name>/Configuration/EventScripts/PostCompile && chmod +x /v/<instance_name>/Configuration/EventScripts/PostCompile"
+INSTANCE=ResurgenceStation
+INSTANCE_VOL=resurgencestation_tgs_instances
+REPO_DIR=~/ResurgenceStation
+for SCRIPT in PostCompile PreStartup; do
+  docker run --rm \
+    -v "$REPO_DIR/tools/tgs4_scripts":/src:ro \
+    -v "$INSTANCE_VOL":/v \
+    alpine sh -c "cp /src/$SCRIPT.sh /v/$INSTANCE/Configuration/EventScripts/$SCRIPT && chmod +x /v/$INSTANCE/Configuration/EventScripts/$SCRIPT"
+done
 ```
 
-For the canonical owo.fm deployment that's:
-
-```bash
-docker run --rm \
-  -v ~/ResurgenceStation/tools/tgs4_scripts:/src:ro \
-  -v resurgencestation_tgs_instances:/v \
-  alpine sh -c "cp /src/PostCompile.sh /v/ResurgenceStation/Configuration/EventScripts/PostCompile && chmod +x /v/ResurgenceStation/Configuration/EventScripts/PostCompile"
-```
-
-You can also edit it later through the TGS panel **Files & Scripts** tab.
+You can also edit them later through the TGS panel **Files & Scripts** tab.
 
 The `tools/tgs4_scripts/` folder name is legacy from TGS3/TGS4 conventions where event scripts lived in the codebase. TGS6+ reads scripts from the instance Configuration directory instead, but we keep the folder in the codebase as the reference source so anyone setting up a new instance has a known good script to copy.
 
@@ -78,6 +83,20 @@ Once the first-time setup is done, deploys are driven entirely from the TGS pane
 The `~/apply-customizations.sh` script on the live owo.fm server takes care of post-pull Caddyfile customizations (the `panel.owo.fm` rename and the pokelabs block) on each `git pull`. It is not part of TGS's flow and only matters if you are manually pulling on the host outside of TGS.
 
 ## Common failures
+
+### Logs at logs.owo.fm 404 even though the game is writing round files
+
+The PreStartup script did not run, or it failed before symlinking. Check that the game's working dir has `data/logs` as a symlink to the persistent path:
+
+```bash
+docker exec <tgs_container> ls -la /tgs_instances/<instance>/Game/Live/data/logs
+```
+
+Should show `-> /tgstation/data/logs`. If it shows a real directory instead, run the script manually:
+
+```bash
+docker exec <tgs_container> /tgs_instances/<instance>/Configuration/EventScripts/PreStartup /tgs_instances/<instance>/Game/Live
+```
 
 ### "BSQL library failed to provide connect operation for connection id (MySql)"
 
