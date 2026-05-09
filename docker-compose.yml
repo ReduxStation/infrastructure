@@ -159,7 +159,10 @@ services:
       - ./slimbus/public:/var/www/html/public:ro
       - caddy_data:/data
       - caddy_certs:/config
-      # log-parser reads round files from this volume; caddy no longer file_serves it.
+      # logs.owo.fm directory listings are served from this read-only mount
+      # using caddy's file_server browse UI; file content is reverse-proxied
+      # to the log-parser service so the scrubbing and allowlist apply.
+      - game_data:/srv/logs:ro
       # Pre-rendered map tiles served at webmap.owo.fm
       - webmap_tiles:/srv/webmap:ro
       # Built demo viewer SPA served at demo.owo.fm
