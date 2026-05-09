@@ -10,11 +10,23 @@ stats.owo.fm {
 }
 
 logs.owo.fm {
-    root * /tgstation/data/logs
-    file_server browse
+    # Logs are served through the public-log-parser service which scrubs IPs,
+    # CIDs, and admin-private content, and 404s requests for in-progress
+    # rounds. The parser reads the same /tgstation/data/logs tree this caddy
+    # site previously file_server'd directly.
+    reverse_proxy log-parser:8090
 
     # Allow the demo viewer (demo.owo.fm) to fetch demo.log files cross-origin.
     header Access-Control-Allow-Origin "*"
+}
+
+# Internal-only static site for the parser's ongoing-round-protection stub.
+# Listens on the docker network at port 8081, no public binding. Until the
+# DMAPI bridge (Phase 4) updates serverinfo.json on round events, this
+# returns {"servers": []} so the parser does not block any rounds.
+:8081 {
+    root * /srv/serverinfo
+    file_server
 }
 
 demo.owo.fm {
