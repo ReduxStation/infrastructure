@@ -98,8 +98,11 @@ services:
 
   # ── Webmap tile renderer ──────────────────────────────────────────────────
   #
-  # Runs ONCE on `docker-compose up`, writes XYZ tile pyramid to webmap_tiles
-  # volume, then exits.  Caddy picks up those tiles at webmap.owo.fm.
+  # Runs ONCE on `docker-compose up`, writes XYZ tile pyramid + per-z
+  # objects.json + manifest.json to the webmap_tiles volume, then exits.
+  # Caddy picks up those tiles at tiles.owo.fm (the raw raster + metadata
+  # service); the interactive viewer at webmap.owo.fm fetches them from
+  # there cross-origin.
   #
   # To force a re-render after a map update:
   #   docker volume rm <project>_webmap_tiles
@@ -114,6 +117,24 @@ services:
       - .:/src:ro
       # Tile output shared with Caddy
       - webmap_tiles:/tiles
+
+  # ── Webmap site builder ───────────────────────────────────────────────────
+  #
+  # Bundles the interactive Leaflet UI (HTML + JS + CSS + vendored Leaflet)
+  # into the webmap_site_dist volume.  Caddy serves it at webmap.owo.fm.
+  # Runs once and exits.
+  #
+  # To force a rebuild after editing the site source:
+  #   docker-compose build webmap-site-builder
+  #   docker volume rm <project>_webmap_site_dist
+  #   docker-compose up webmap-site-builder
+  webmap-site-builder:
+    build:
+      context: .
+      dockerfile: docker/webmap-site/Dockerfile
+    restart: "no"
+    volumes:
+      - webmap_site_dist:/dist
 
   # ── Demo viewer builder ───────────────────────────────────────────────────
   #
@@ -161,8 +182,10 @@ services:
       # using caddy's file_server browse UI; file content is reverse-proxied
       # to the log-parser service so the scrubbing and allowlist apply.
       - game_data:/srv/logs:ro
-      # Pre-rendered map tiles served at webmap.owo.fm
-      - webmap_tiles:/srv/webmap:ro
+      # Pre-rendered map tiles + object metadata served at tiles.owo.fm
+      - webmap_tiles:/srv/tiles:ro
+      # Interactive map viewer (HTML + JS) served at webmap.owo.fm
+      - webmap_site_dist:/srv/webmap-site:ro
       # Built demo viewer SPA served at demo.owo.fm
       - demo_viewer_dist:/srv/demo-viewer:ro
 
@@ -174,4 +197,5 @@ volumes:
   caddy_data:
   caddy_certs:
   webmap_tiles:
+  webmap_site_dist:
   demo_viewer_dist:
