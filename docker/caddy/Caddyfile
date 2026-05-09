@@ -10,11 +10,23 @@ stats.owo.fm {
 }
 
 logs.owo.fm {
-    # Logs are served through the public-log-parser service which scrubs IPs,
-    # CIDs, and admin-private content, and 404s requests for in-progress
-    # rounds. The parser reads the same /tgstation/data/logs tree this caddy
-    # site previously file_server'd directly.
-    reverse_proxy log-parser:8090
+    root * /srv/logs/logs
+
+    # File requests (the .log/.json/.html/.txt content of each round) go through
+    # the public-log-parser service which scrubs IPs, CIDs, and admin-private
+    # content, and 404s files in rounds that are still in progress. The parser
+    # also gates the per-file allowlist (sql.log, hrefs.log, etc. 404 by name).
+    @file_exists file
+    handle @file_exists {
+        reverse_proxy log-parser:8090
+    }
+
+    # Directory requests (the year/month/day/round-N tree, plus /) are served
+    # straight from the volume by Caddy's file_server browse so users get the
+    # built-in directory UI rather than the parser's stub HTML.
+    handle {
+        file_server browse
+    }
 
     # Allow the demo viewer (demo.owo.fm) to fetch demo.log files cross-origin.
     header Access-Control-Allow-Origin "*"
