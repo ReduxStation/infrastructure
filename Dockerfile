@@ -36,13 +36,16 @@ ENV LD_LIBRARY_PATH="/opt/byond/bin"
 
 ##############################################################################
 # Stage 2 — Build rust_g from source (32-bit, Debian 12)
-#   Compiling from source guarantees GLIBC compatibility. Only the features
-#   actually used by this codebase are enabled: dmi, git, log.
+#   Compiling from source guarantees GLIBC compatibility. We build the dmi
+#   and log features (both pure-Rust). dmi is what makes spritesheet PNG
+#   flattening work in /datum/asset/spritesheet/ensure_stripped() — without
+#   it BYOND only emits the first frame of every multi-state spritesheet PNG
+#   to the client (the "every sprite is the first sprite" UI bug).
 ##############################################################################
 FROM debian:12-slim AS rust_g_builder
 
 # gcc-multilib gives us the 32-bit linker stubs needed for i686 cross-builds.
-# No i386 arch or OpenSSL needed — we only build dmi+log which are pure-Rust.
+# No i386 arch or OpenSSL needed — dmi+log are pure-Rust.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         ca-certificates \
@@ -83,7 +86,7 @@ RUN sed -i '/GenericImageError(#\[from\] ImageError)/i\    #[cfg(feature = "dmi"
 RUN cargo build --release \
         --target=i686-unknown-linux-gnu \
         --no-default-features \
-        --features="log"
+        --features="log dmi"
 
 RUN cp target/i686-unknown-linux-gnu/release/librust_g.so /librust_g.so
 
