@@ -56,10 +56,11 @@ logs.owo.fm {
 
 # Internal-only site that serves the public-log-parser's serverinfo.json
 # from the game_data volume. The TGS RoundStart/RoundEnd event scripts
-# (installed in Configuration/EventScripts/, see tools/tgs4_scripts/) write
-# this file with the active round id; the parser polls every 60 seconds
-# and 404s any /YYYY/MM/DD/round-N/ path whose round_id is currently in
-# the file. Bound to the docker network only, no public binding.
+# (wrappers installed in Configuration/EventScripts/ forward to
+# tools/tgs_scripts/RoundStart.sh and RoundEnd.sh) write this file with the
+# active round id; the parser polls every 60 seconds and 404s any
+# /YYYY/MM/DD/round-N/ path whose round_id is currently in the file. Bound
+# to the docker network only, no public binding.
 :8081 {
     root * /srv/logs
     file_server

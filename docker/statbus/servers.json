@@ -2,7 +2,7 @@
   {
     "port": 1337,
     "name": "HippieStation",
-    "local_logs": "/tgstation/data/logs/",
+    "local_logs": "/srv/gamestatic/logs/",
     "public_logs_url": "https://logs.owo.fm/",
     "demo_viewer": "https://demo.owo.fm",
     "webmap": {

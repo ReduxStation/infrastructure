@@ -57,10 +57,29 @@ services:
       Database__ConnectionString: "Server=mariadb;Port=3306;Database=tgs;Uid=ss13;Pwd=${MYSQL_PASSWORD:?set MYSQL_PASSWORD in .env};"
       Database__DatabaseType: MariaDB
       Database__ServerVersion: "10.11.0"
+      # Tell BYOND to look for native libraries (librust_g.so, libBSQL.so,
+      # libquickwrite.so) in the game directory. TGS-6 launches DreamDaemon
+      # via a wrapper script that does:
+      #     export LD_LIBRARY_PATH="$ORIGIN:$LD_LIBRARY_PATH"
+      # where $ORIGIN is the BYOND bin dir. The right-side $LD_LIBRARY_PATH
+      # is whatever this process inherits from us, so the dlopen search path
+      # becomes "BYOND/bin:Game/Live". The libs are committed in the repo at
+      # the root and end up in Game/Live on every TGS source-tree deploy, so
+      # BYOND finds them via this path. No lib scatter / PostCompile.sh /
+      # ldconfig dance required.
+      LD_LIBRARY_PATH: /tgs_instances/ResurgenceStation/Game/Live
     volumes:
       - ./docker/tgs/appsettings.Production.yml:/config_data/appsettings.Production.yml:ro
-      - game_data:/tgstation/data
       - tgs_instances:/tgs_instances
+      # Persistent game data mounted directly at TGS-6's GameStaticFiles path.
+      # TGS automatically hard-links Configuration/GameStaticFiles/data into
+      # Game/Live/data on every deploy (per the upstream tgstation
+      # RUNNING_A_SERVER.md pattern: "data should be initially created as an
+      # empty directory. The game stores persistent data here"), so the game
+      # writes (player_saves, logs, spritesheets, mode.txt, photo_albums)
+      # land here and persist. No symlink scripts needed; this IS the path
+      # TGS expects.
+      - game_data:/tgs_instances/ResurgenceStation/Configuration/GameStaticFiles/data
       - tgs_logs:/tgs_logs
 
   # ── Statbus (slimbus PHP-FPM) ─────────────────────────────────────────────
@@ -93,8 +112,11 @@ services:
     volumes:
       # servers.json tells slimbus which game port(s) to track
       - ./docker/statbus/servers.json:/var/www/html/src/conf/servers.json:ro
-      # Game logs mounted read-only so LogsController can read them directly
-      - game_data:/tgstation/data:ro
+      # Game data mounted read-only so LogsController can read round logs.
+      # Path inside the statbus container is just a label — points at the
+      # same persistent volume that TGS uses for GameStaticFiles/data, so
+      # logs written by the game from data/logs/ are visible here.
+      - game_data:/srv/gamestatic:ro
 
   # ── Webmap tile renderer ──────────────────────────────────────────────────
   #
