@@ -64,6 +64,27 @@ demo.owo.fm {
     header Access-Control-Allow-Origin "*"
 }
 
+# BYOND RSC asset CDN. Serves the compiled .rsc files from the live game
+# directory so BYOND clients can preload resources over HTTPS instead of
+# through the in-band BYOND TCP socket. Wired by /client/proc/send_resources
+# which sets client.preload_rsc from config/external_rsc_urls.txt.
+# Only *.rsc paths are served; everything else 404s so the rest of the TGS
+# game directory is not exposed.
+rsc.owo.fm {
+    root * /srv/tgs/ResurgenceStation/Game/Live
+
+    @rsc path *.rsc
+    handle @rsc {
+        encode gzip
+        header Cache-Control "public, max-age=300"
+        header Access-Control-Allow-Origin "*"
+        file_server
+    }
+    handle {
+        respond 404
+    }
+}
+
 # Raw map tile pyramid (PNGs). Consumed by webmap.owo.fm and statbus.
 tiles.owo.fm {
     root * /srv/tiles

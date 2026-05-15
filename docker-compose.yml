@@ -227,6 +227,10 @@ services:
       # using caddy's file_server browse UI; file content is reverse-proxied
       # to the log-parser service so the scrubbing and allowlist apply.
       - game_data:/srv/logs:ro
+      # rsc.owo.fm serves *.rsc files from /tgs_instances. Caddyfile
+      # restricts public access to *.rsc only; the rest of the directory
+      # is mounted but 404'd by the path matcher.
+      - tgs_instances:/srv/tgs:ro
       # Pre-rendered map tiles + object metadata served at tiles.owo.fm
       - webmap_tiles:/srv/tiles:ro
       # Interactive map viewer (HTML + JS) served at webmap.owo.fm
