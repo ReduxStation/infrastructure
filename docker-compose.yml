@@ -218,6 +218,10 @@ services:
     ports:
       - "80:80"
       - "443:443"
+      # UDP/443 for HTTP/3 (QUIC). Caddy advertises alt-svc: h3=":443";
+      # without this UDP map the advertisement is unreachable and clients
+      # silently fall back to HTTP/2 over TCP.
+      - "443:443/udp"
     volumes:
       - ./docker/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - ./slimbus/public:/var/www/html/public:ro
