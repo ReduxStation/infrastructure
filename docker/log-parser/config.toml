@@ -9,7 +9,8 @@ address = "0.0.0.0:8090"
 raw_logs_path = "/logs/logs"
 
 [ongoing_round_protection]
-# A static stub served by caddy on its internal :8081 site. Returns
-# {"servers": []} until the DMAPI bridge (Phase 4) replaces it with a
-# live-updated file written on round start/end events.
+# Live file served by caddy on its internal :8081 site. Written by the
+# serverinfo-updater service every POLL_INTERVAL seconds. The updater
+# polls the running DreamDaemon via world.Topic ?status and emits the
+# current round_id. Decoupled from in-game DMAPI events.
 serverinfo = "http://caddy:8081/serverinfo.json"

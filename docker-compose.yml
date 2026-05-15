@@ -186,6 +186,27 @@ services:
       - ./docker/log-parser/config.toml:/app/config.toml:ro
       - game_data:/logs:ro
 
+  # ── serverinfo.json updater (powers the log-parser's ongoing-round hide) ──
+  # Polls the running DreamDaemon via world.Topic ?status every POLL_INTERVAL
+  # seconds, writes serverinfo.json into game_data so caddy:8081 can serve
+  # it to log-parser. Mirrors tgstation13.org's getserverdata.php pattern.
+  # Decoupled from the game so no DMAPI TGS events are needed.
+  serverinfo-updater:
+    build:
+      context: .
+      dockerfile: docker/serverinfo-updater/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - tgs
+    environment:
+      GAME_HOST: tgs
+      GAME_PORT: "1337"
+      SERVER_IDENTIFIER: owo
+      OUTPUT_PATH: /srv/output/serverinfo.json
+      POLL_INTERVAL: "30"
+    volumes:
+      - game_data:/srv/output
+
   # ── Caddy (reverse proxy + auto-HTTPS for statbus) ───────────────────────
   caddy:
     build:
