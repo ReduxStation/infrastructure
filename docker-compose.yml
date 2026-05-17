@@ -16,6 +16,9 @@ services:
   mariadb:
     build:
       context: ./docker/mariadb
+      additional_contexts:
+        - "game=../game"
+        - "infra=.." 
     restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD_FILE: /run/secrets/mysql_root_password
