@@ -2,6 +2,8 @@ FROM tgstation/server:latest
 
 # Install i386 (32-bit) runtime dependencies required by BYOND and its
 # native extensions (rust_g, libBSQL.so, libquickwrite.so).
+# Plus git + ca-certificates for EventScript update-config.sh that clones
+# the config repo into Configuration/GameStaticFiles/config/ each round.
 RUN dpkg --add-architecture i386 \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
@@ -11,6 +13,8 @@ RUN dpkg --add-architecture i386 \
         libssl3:i386 \
         libcurl4:i386 \
         zlib1g:i386 \
+        git \
+        ca-certificates \
     && ln -sf /usr/lib/i386-linux-gnu/libmariadb.so.3 \
               /usr/lib/i386-linux-gnu/libmariadb.so.2 \
     && rm -rf /var/lib/apt/lists/*
