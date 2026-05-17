@@ -1,30 +1,30 @@
-# ResurgenceStation — Docker Compose
-#
-# Services: mariadb · tgs (TGStation Server) · statbus (slimbus PHP-FPM) · caddy
-#
-# Quick start:
-#   cp .env.example .env        # fill in MYSQL_ROOT_PASSWORD + MYSQL_PASSWORD
-#   docker compose build
-#   docker compose up -d
-#
-# Ports exposed on the host:
-#   1337      — BYOND game port (clients connect here)
-#   5000      — TGS web panel  (configure instances, watchdog, chat bots)
-#   3306      — MariaDB         (optional; for local DB tooling)
+# ResurgenceStation Docker Compose stack.
+# Volume namespace pinned via `name: resurgencestation`.
+# Secrets live at /etc/resurgence/secrets/*; Compose mounts them via `secrets:`.
+# Non-secret cross-cutting vars come from globals.env (symlinked to .env).
+# Host-only secret overrides come from .env.local (gitignored).
+
+name: resurgencestation
+
+secrets:
+  mysql_root_password:
+    file: /etc/resurgence/secrets/mysql_root_password
+  mysql_password:
+    file: /etc/resurgence/secrets/mysql_password
 
 services:
-
-  # ── Database ─────────────────────────────────────────────────────────────
   mariadb:
     build:
-      context: .
-      dockerfile: docker/mariadb/Dockerfile
+      context: ./docker/mariadb
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD in .env}
+      MYSQL_ROOT_PASSWORD_FILE: /run/secrets/mysql_root_password
       MYSQL_DATABASE: ss13
       MYSQL_USER: ss13
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?set MYSQL_PASSWORD in .env}
+      MYSQL_PASSWORD_FILE: /run/secrets/mysql_password
+    secrets:
+      - mysql_root_password
+      - mysql_password
     volumes:
       - mariadb_data:/var/lib/mysql
     ports:
@@ -35,220 +35,168 @@ services:
       timeout: 5s
       retries: 30
 
-  # ── TGStation Server (manages BYOND, hot-swap, watchdog, chat bots) ─────────
   tgs:
     build:
-      context: .
-      dockerfile: docker/tgs/Dockerfile
+      context: ./docker/tgs
     init: true
     restart: unless-stopped
-    cap_add:
-      - SYS_NICE
-      - SYS_RESOURCE
+    cap_add: [SYS_NICE, SYS_RESOURCE]
     depends_on:
-      mariadb:
-        condition: service_healthy
+      mariadb: { condition: service_healthy }
     ports:
       - "${GAME_PORT:-1337}:1337/tcp"
       - "${GAME_PORT:-1337}:1337/udp"
       - "5000:5000"
     environment:
-      # Password injected at runtime — never stored in the image or this file.
-      Database__ConnectionString: "Server=mariadb;Port=3306;Database=tgs;Uid=ss13;Pwd=${MYSQL_PASSWORD:?set MYSQL_PASSWORD in .env};"
+      # TGS doesn't support _FILE convention; password comes from .env.local
+      # via docker-compose env interpolation.
+      Database__ConnectionString: "Server=mariadb;Port=3306;Database=tgs;Uid=ss13;Pwd=${MYSQL_PASSWORD:?set MYSQL_PASSWORD in .env.local};"
       Database__DatabaseType: MariaDB
       Database__ServerVersion: "10.11.0"
-      # Tell BYOND to look for native libraries (librust_g.so, libBSQL.so,
-      # libquickwrite.so) in the game directory. TGS-6 launches DreamDaemon
-      # via a wrapper script that does:
-      #     export LD_LIBRARY_PATH="$ORIGIN:$LD_LIBRARY_PATH"
-      # where $ORIGIN is the BYOND bin dir. The right-side $LD_LIBRARY_PATH
-      # is whatever this process inherits from us, so the dlopen search path
-      # becomes "BYOND/bin:Game/Live". The libs are committed in the repo at
-      # the root and end up in Game/Live on every TGS source-tree deploy, so
-      # BYOND finds them via this path. No lib scatter / PostCompile.sh /
-      # ldconfig dance required.
       LD_LIBRARY_PATH: /tgs_instances/ResurgenceStation/Game/Live
+      # Load EventScripts from /etc/tgs-EventScripts.d/resurgencestation/ for all instances
+      # — eliminates the per-instance Configuration/EventScripts/ symlink ritual.
+      General__AdditionalEventScriptsDirectories__0: /etc/tgs-EventScripts.d/resurgencestation
     volumes:
       - ./docker/tgs/appsettings.Production.yml:/config_data/appsettings.Production.yml:ro
       - tgs_instances:/tgs_instances
-      # Persistent game data mounted directly at TGS-6's GameStaticFiles path.
-      # TGS automatically hard-links Configuration/GameStaticFiles/data into
-      # Game/Live/data on every deploy (per the upstream tgstation
-      # RUNNING_A_SERVER.md pattern: "data should be initially created as an
-      # empty directory. The game stores persistent data here"), so the game
-      # writes (player_saves, logs, spritesheets, mode.txt, photo_albums)
-      # land here and persist. No symlink scripts needed; this IS the path
-      # TGS expects.
-      - game_data:/tgs_instances/ResurgenceStation/Configuration/GameStaticFiles/data
       - tgs_logs:/tgs_logs
+      - /etc/tgs-EventScripts.d/resurgencestation:/etc/tgs-EventScripts.d/resurgencestation:ro
+      - /etc/resurgence/secrets:/etc/resurgence/secrets:ro
 
-  # ── Statbus (slimbus PHP-FPM) ─────────────────────────────────────────────
   statbus:
     build:
-      context: .
-      dockerfile: docker/statbus/Dockerfile
+      context: ./docker/statbus
     restart: unless-stopped
     depends_on:
-      mariadb:
-        condition: service_healthy
+      mariadb: { condition: service_healthy }
     environment:
       DB_METHOD: mysql
       DB_DATABASE: ss13
       DB_USERNAME: ss13
-      DB_PASSWORD: ${MYSQL_PASSWORD}
+      DB_PASSWORD: ${MYSQL_PASSWORD:?}
       DB_HOST: mariadb
       DB_PORT: "3306"
       DB_PREFIX: "SS13_"
       ALT_DB_METHOD: mysql
       ALT_DB_DATABASE: statbus
       ALT_DB_USERNAME: ss13
-      ALT_DB_PASSWORD: ${MYSQL_PASSWORD}
+      ALT_DB_PASSWORD: ${MYSQL_PASSWORD:?}
       ALT_DB_HOST: mariadb
       ALT_DB_PORT: "3306"
-      APP: "${STATBUS_APP:-HippieStation Statbus}"
-      GITHUB: "${GITHUB:-HippieStation/HippieStation}"
+      APP: "${STATBUS_APP:-ResurgenceStation Statbus}"
+      GITHUB: "${GITHUB:-ResurgenceStation/ResurgenceStation}"
       DEBUG: "FALSE"
       DISPLAY_ERRORS: "FALSE"
     volumes:
-      # servers.json tells slimbus which game port(s) to track
       - ./docker/statbus/servers.json:/var/www/html/src/conf/servers.json:ro
-      # Game data mounted read-only so LogsController can read round logs.
-      # Path inside the statbus container is just a label — points at the
-      # same persistent volume that TGS uses for GameStaticFiles/data, so
-      # logs written by the game from data/logs/ are visible here.
-      - game_data:/srv/gamestatic:ro
+      - type: volume
+        source: tgs_instances
+        target: /srv/gamestatic
+        read_only: true
+        volume:
+          subpath: ResurgenceStation/Configuration/GameStaticFiles/data
 
-  # ── Webmap tile renderer ──────────────────────────────────────────────────
-  #
-  # Runs ONCE on `docker-compose up`, writes XYZ tile pyramid + per-z
-  # objects.json + manifest.json to the webmap_tiles volume, then exits.
-  # Caddy picks up those tiles at tiles.owo.fm (the raw raster + metadata
-  # service); the interactive viewer at webmap.owo.fm fetches them from
-  # there cross-origin.
-  #
-  # To force a re-render after a map update:
-  #   docker volume rm <project>_webmap_tiles
-  #   docker-compose up webmap-renderer
   webmap-renderer:
     build:
-      context: .
-      dockerfile: docker/webmap/Dockerfile
+      context: ./docker/webmap
     restart: "no"
     volumes:
-      # Full repo bind-mounted read-only — dmm-tools needs icons + code + DMM
-      - .:/src:ro
-      # Tile output shared with Caddy
+      - ../game:/src:ro          # operator sibling clone of game repo at /srv/resurgence/game
       - webmap_tiles:/tiles
 
-  # ── Webmap site builder ───────────────────────────────────────────────────
-  #
-  # Bundles the interactive Leaflet UI (HTML + JS + CSS + vendored Leaflet)
-  # into the webmap_site_dist volume.  Caddy serves it at webmap.owo.fm.
-  # Runs once and exits.
-  #
-  # To force a rebuild after editing the site source:
-  #   docker-compose build webmap-site-builder
-  #   docker volume rm <project>_webmap_site_dist
-  #   docker-compose up webmap-site-builder
   webmap-site-builder:
     build:
-      context: .
-      dockerfile: docker/webmap-site/Dockerfile
+      context: ./docker/webmap-site
     restart: "no"
     volumes:
       - webmap_site_dist:/dist
 
-  # ── Demo viewer builder ───────────────────────────────────────────────────
-  #
-  # Clones ResurgenceStation/demo-viewer, patches it, and builds a static
-  # bundle into the demo_viewer_dist volume.  Runs once and exits; Caddy
-  # picks up those files at demo.owo.fm.
-  #
-  # To force a rebuild after upstream changes:
-  #   docker-compose build demo-viewer-builder
-  #   docker volume rm <project>_demo_viewer_dist
-  #   docker-compose up demo-viewer-builder
   demo-viewer-builder:
     build:
-      context: .
-      dockerfile: docker/demo-viewer/Dockerfile
+      context: ./docker/demo-viewer
     restart: "no"
     volumes:
       - demo_viewer_dist:/dist
 
-  # ── Public log parser (scrubs IPs/CIDs/ADMINPRIVATE, hides ongoing rounds) ─
   log-parser:
     image: ghcr.io/resurgencestation/public-log-parser:latest
     restart: unless-stopped
-    depends_on:
-      - caddy
+    depends_on: [caddy]
     volumes:
       - ./docker/log-parser/config.toml:/app/config.toml:ro
-      - game_data:/logs:ro
+      - type: volume
+        source: tgs_instances
+        target: /logs
+        read_only: true
+        volume:
+          subpath: ResurgenceStation/Configuration/GameStaticFiles/data
 
-  # ── serverinfo.json updater (powers the log-parser's ongoing-round hide) ──
-  # Polls the running DreamDaemon via world.Topic ?status every POLL_INTERVAL
-  # seconds, writes serverinfo.json into game_data so caddy:8081 can serve
-  # it to log-parser. Mirrors tgstation13.org's getserverdata.php pattern.
-  # Decoupled from the game so no DMAPI TGS events are needed.
   serverinfo-updater:
     build:
-      context: .
-      dockerfile: docker/serverinfo-updater/Dockerfile
+      context: ./docker/serverinfo-updater
     restart: unless-stopped
-    depends_on:
-      - tgs
+    depends_on: [tgs]
     environment:
       GAME_HOST: tgs
       GAME_PORT: "1337"
-      SERVER_IDENTIFIER: owo
+      SERVER_IDENTIFIER: ${SERVER_SUBDIR:-owo}
       OUTPUT_PATH: /srv/output/serverinfo.json
       POLL_INTERVAL: "30"
     volumes:
-      - game_data:/srv/output
+      - type: volume
+        source: tgs_instances
+        target: /srv/output
+        volume:
+          subpath: ResurgenceStation/Configuration/GameStaticFiles/data
 
-  # ── Caddy (reverse proxy + auto-HTTPS for statbus) ───────────────────────
   caddy:
     build:
-      context: .
-      dockerfile: docker/caddy/Dockerfile
+      context: ./docker/caddy
     restart: unless-stopped
-    depends_on:
-      - statbus
+    depends_on: [statbus]
     ports:
       - "80:80"
       - "443:443"
-      # UDP/443 for HTTP/3 (QUIC). Caddy advertises alt-svc: h3=":443";
-      # without this UDP map the advertisement is unreachable and clients
-      # silently fall back to HTTP/2 over TCP.
       - "443:443/udp"
     volumes:
       - ./docker/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - ./slimbus/public:/var/www/html/public:ro
       - caddy_data:/data
       - caddy_certs:/config
-      # logs.owo.fm directory listings are served from this read-only mount
-      # using caddy's file_server browse UI; file content is reverse-proxied
-      # to the log-parser service so the scrubbing and allowlist apply.
-      - game_data:/srv/logs:ro
-      # rsc.owo.fm serves *.rsc files from /tgs_instances. Caddyfile
-      # restricts public access to *.rsc only; the rest of the directory
-      # is mounted but 404'd by the path matcher.
+      - type: volume
+        source: tgs_instances
+        target: /srv/logs
+        read_only: true
+        volume:
+          subpath: ResurgenceStation/Configuration/GameStaticFiles/data
       - tgs_instances:/srv/tgs:ro
-      # Pre-rendered map tiles + object metadata served at tiles.owo.fm
       - webmap_tiles:/srv/tiles:ro
-      # Interactive map viewer (HTML + JS) served at webmap.owo.fm
       - webmap_site_dist:/srv/webmap-site:ro
-      # Built demo viewer SPA served at demo.owo.fm
       - demo_viewer_dist:/srv/demo-viewer:ro
 
 volumes:
   mariadb_data:
-  game_data:
+    external: true
+    name: resurgencestation_mariadb_data
   tgs_instances:
+    external: true
+    name: resurgencestation_tgs_instances
   tgs_logs:
+    external: true
+    name: resurgencestation_tgs_logs
   caddy_data:
+    external: true
+    name: resurgencestation_caddy_data
   caddy_certs:
+    external: true
+    name: resurgencestation_caddy_certs
   webmap_tiles:
+    external: true
+    name: resurgencestation_webmap_tiles
   webmap_site_dist:
+    external: true
+    name: resurgencestation_webmap_site_dist
   demo_viewer_dist:
+    external: true
+    name: resurgencestation_demo_viewer_dist

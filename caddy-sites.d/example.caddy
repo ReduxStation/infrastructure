@@ -1,0 +1,9 @@
+# Example operator-local site block.
+# Drop additional *.caddy files in this directory and the Caddyfile will
+# import them. This file is a stub; copy it to your-site.caddy and edit.
+#
+# example.owo.fm {
+#     root * /var/www/html/public
+#     file_server
+#     encode zstd gzip
+# }

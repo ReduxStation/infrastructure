@@ -1,0 +1,3 @@
+# Host-only secret overrides (the file the operator copies from .env.example)
+.env.local
+.env
