@@ -18,7 +18,7 @@ services:
       context: ./docker/mariadb
       additional_contexts:
         - "game=../game"
-        - "infra=.." 
+        - "infra=." 
     restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD_FILE: /run/secrets/mysql_root_password
