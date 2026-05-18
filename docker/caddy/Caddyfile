@@ -2,8 +2,6 @@
 # website-builder one-shot service; output lands in the website_dist volume
 # which is mounted here read-only.
 reduxstation.com, www.reduxstation.com {
-    root * /srv/website
-    file_server
     encode gzip zstd
 
     header {
@@ -15,6 +13,21 @@ reduxstation.com, www.reduxstation.com {
 
     @assets path /assets/*
     header @assets Cache-Control "public, max-age=31536000, immutable"
+
+    # Same-origin status JSON proxy. The internal :8081 caddy site
+    # (docker-network-only) serves the serverinfo.json that the
+    # serverinfo-updater container writes every 30 seconds from a
+    # /world/Topic ?status poll. Routing through the public origin
+    # avoids a CORS preflight in the browser; status_endpoint on the
+    # landing page is set to "/serverinfo.json" (same origin).
+    handle /serverinfo.json {
+        reverse_proxy localhost:8081
+    }
+
+    handle {
+        root * /srv/website
+        file_server
+    }
 }
 
 # BYOND join redirect. A browser hitting https://play.reduxstation.com bounces
