@@ -52,15 +52,26 @@ for i in $(seq 1 60); do
     sleep 1
 done
 
-# install.php emits a LocalSettings.php to its --target path. We never use
-# that file; the bind-mounted one in /var/www/html/LocalSettings.php is the
-# real config. install.php's side effect — writing the DB schema and the
-# initial sysop row — is what we want.
+# Our LocalSettings.php is bind-mounted at /opt/redux-mw/LocalSettings.php
+# (NOT /var/www/html/LocalSettings.php). install.php refuses to run if
+# a LocalSettings.php already exists in /var/www/html, so we keep ours
+# out of the way during install and copy it in after.
+SRC_LOCAL_SETTINGS=/opt/redux-mw/LocalSettings.php
+DST_LOCAL_SETTINGS=/var/www/html/LocalSettings.php
+
+if [ ! -f "${SRC_LOCAL_SETTINGS}" ]; then
+    echo "[redux-mw] ${SRC_LOCAL_SETTINGS} missing — bind mount not wired?" >&2
+    exit 1
+fi
+
 INSTALL_MARKER=/var/www/html/images/.redux-installed
 if [ ! -f "${INSTALL_MARKER}" ]; then
     echo "[redux-mw] first-run install: schema + initial admin"
+    # Make sure no stale LocalSettings.php is in place from a prior aborted
+    # install — install.php will refuse otherwise.
+    rm -f "${DST_LOCAL_SETTINGS}"
     php /var/www/html/maintenance/install.php \
-        --confpath=/tmp/redux-mw-install \
+        --confpath=/tmp \
         --dbtype=mysql \
         --dbserver="${MEDIAWIKI_DB_HOST}" \
         --dbname="${MEDIAWIKI_DB_NAME}" \
@@ -75,24 +86,26 @@ if [ ! -f "${INSTALL_MARKER}" ]; then
         --skins=Vector \
         "${MEDIAWIKI_SITENAME}" \
         "${MEDIAWIKI_ADMIN_USER}"
-    rm -f /tmp/redux-mw-install
+    # The install.php-generated LocalSettings.php at /tmp/LocalSettings.php
+    # is unused; our bind-mounted one is the authoritative config.
+    rm -f /tmp/LocalSettings.php
     mkdir -p /var/www/html/images
-    touch "${INSTALL_MARKER}"
     chown -R www-data:www-data /var/www/html/images
+    touch "${INSTALL_MARKER}"
 else
     echo "[redux-mw] already installed, skipping schema setup"
 fi
 
+# Copy LocalSettings.php into the wiki root on every start so config
+# changes in the bind-mount source propagate. cp -p preserves perms;
+# the source is mode 0644 in the image build.
+cp "${SRC_LOCAL_SETTINGS}" "${DST_LOCAL_SETTINGS}"
+chown www-data:www-data "${DST_LOCAL_SETTINGS}"
+chmod 644 "${DST_LOCAL_SETTINGS}"
+
 # Apply schema migrations on every start. Idempotent; safe on a fresh DB.
 echo "[redux-mw] running maintenance/update.php"
 php /var/www/html/maintenance/update.php --quick --quiet
-
-# LocalSettings.php is bind-mounted read-only at /var/www/html/LocalSettings.php.
-# Make sure the file is what we expect before Apache picks it up.
-if [ ! -f /var/www/html/LocalSettings.php ]; then
-    echo "[redux-mw] LocalSettings.php missing — bind mount not wired?" >&2
-    exit 1
-fi
 
 # Owner adjustments for the images/ volume so uploads survive.
 chown -R www-data:www-data /var/www/html/images
