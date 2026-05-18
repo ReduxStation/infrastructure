@@ -1,3 +1,19 @@
+# Per-service favicon snippet. Browsers auto-fetch /favicon.ico on every
+# subdomain regardless of what the upstream app serves; this snippet
+# rewrites that request to the matching Win98-era icon under
+# /srv/service-favicons/<name>.ico (mounted from
+# docker/caddy/service-favicons/). One import line per service block.
+(service_favicon) {
+    @favicon path /favicon.ico /favicon.png
+    handle @favicon {
+        root * /srv/service-favicons
+        rewrite /favicon.ico /{args[0]}.ico
+        rewrite /favicon.png /{args[0]}.png
+        header Cache-Control "public, max-age=86400"
+        file_server
+    }
+}
+
 # Landing site. Built from https://github.com/ReduxStation/website by the
 # website-builder one-shot service; output lands in the website_dist volume
 # which is mounted here read-only.
@@ -43,6 +59,8 @@ tgs.reduxstation.com {
 }
 
 stats.reduxstation.com {
+    import service_favicon statbus
+
     root * /var/www/html/public
 
     php_fastcgi statbus:9000
@@ -50,6 +68,8 @@ stats.reduxstation.com {
 }
 
 logs.reduxstation.com {
+    import service_favicon logs
+
     root * /srv/logs/logs
 
     # Defence-in-depth path whitelist. Only requests that match the canonical
@@ -147,6 +167,8 @@ tiles.reduxstation.com {
 # Interactive map viewer — Leaflet UI on top of tiles.reduxstation.com with hover-to-
 # examine, click-to-pin, search, and category layer filters.
 map.reduxstation.com {
+    import service_favicon webmap
+
     root * /srv/webmap-site
     file_server
     try_files {path} /index.html
