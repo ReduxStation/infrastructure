@@ -62,7 +62,10 @@ $wgCookieHttpOnly = true;
 $wgCookieSameSite = 'Lax';
 $wgSessionName = $wgDBname . '_session';
 
-// Default skin and language.
+// Default skin and language. wfLoadSkin('Vector') registers BOTH the
+// legacy 'vector' skin and the modern 'vector-2022' skin (they ship as
+// one bundle); $wgDefaultSkin picks which one new users see.
+wfLoadSkin( 'Vector' );
 $wgDefaultSkin = 'vector-2022';
 $wgLanguageCode = 'en';
 
