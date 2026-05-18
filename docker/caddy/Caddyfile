@@ -1,3 +1,30 @@
+# Landing site. Built from https://github.com/ReduxStation/website by the
+# website-builder one-shot service; output lands in the website_dist volume
+# which is mounted here read-only.
+reduxstation.com, www.reduxstation.com {
+    root * /srv/website
+    file_server
+    encode gzip zstd
+
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        ?Cache-Control "public, max-age=300"
+    }
+
+    @assets path /assets/*
+    header @assets Cache-Control "public, max-age=31536000, immutable"
+}
+
+# BYOND join redirect. A browser hitting https://play.reduxstation.com bounces
+# straight to byond://reduxstation.com:1337, which the BYOND client URL
+# scheme handler intercepts. Caddy obtains a real LE cert for play. so the
+# redirect doesn't trip browser HTTPS warnings on the way.
+play.reduxstation.com {
+    redir byond://reduxstation.com:1337 permanent
+}
+
 tgs.reduxstation.com {
     reverse_proxy tgs:5000
 }
