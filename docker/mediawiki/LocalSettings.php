@@ -62,10 +62,15 @@ $wgCookieHttpOnly = true;
 $wgCookieSameSite = 'Lax';
 $wgSessionName = $wgDBname . '_session';
 
-// Default skin and language. wfLoadSkin('Vector') registers BOTH the
-// legacy 'vector' skin and the modern 'vector-2022' skin (they ship as
-// one bundle); $wgDefaultSkin picks which one new users see.
+// Bundled skins. The mediawiki:1.42.1 image ships these four under
+// /skins/; since MW 1.24 they are no longer auto-loaded, so we have
+// to register each one explicitly. wfLoadSkin('Vector') registers
+// BOTH the legacy 'vector' and the modern 'vector-2022' (they ship
+// as one bundle); $wgDefaultSkin picks which one new visitors see.
 wfLoadSkin( 'Vector' );
+wfLoadSkin( 'MonoBook' );
+wfLoadSkin( 'Timeless' );
+wfLoadSkin( 'MinervaNeue' );
 $wgDefaultSkin = 'vector-2022';
 $wgLanguageCode = 'en';
 
