@@ -58,6 +58,37 @@ tgs.reduxstation.com {
     reverse_proxy tgs:5000
 }
 
+# MediaWiki at wiki.reduxstation.com. Reverse-proxy to the mediawiki
+# Apache container. MediaWiki's LocalSettings.php trusts X-Forwarded-Proto
+# from this Caddy so URLs render https://.
+#
+# Account creation, anonymous edits, and uploads are disabled in
+# LocalSettings.php. The initial sysop is created by docker/mediawiki/
+# entrypoint.sh on first start using MEDIAWIKI_ADMIN_* env vars.
+wiki.reduxstation.com {
+    import service_favicon wiki
+
+    encode gzip zstd
+
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        # MediaWiki sets X-Frame-Options itself; do not double up.
+    }
+
+    # MediaWiki uploads (when enabled) can be up to wgMaxUploadSize. Bump
+    # body size limit so Caddy doesn't 413 in front of MW's own checks.
+    request_body {
+        max_size 128MB
+    }
+
+    reverse_proxy mediawiki:80 {
+        header_up X-Forwarded-Proto "https"
+        header_up X-Forwarded-Host "{host}"
+    }
+}
+
 stats.reduxstation.com {
     import service_favicon statbus
 
