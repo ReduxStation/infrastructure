@@ -10,7 +10,8 @@ sudo chmod 755 "${SECRETS_DIR}"
 
 # Pre-create external volumes (one-time, idempotent)
 for vol in tgs_instances mariadb_data caddy_data caddy_certs \
-           webmap_tiles webmap_site_dist demo_viewer_dist tgs_logs; do
+           webmap_tiles webmap_site_dist demo_viewer_dist website_dist \
+           tgs_logs; do
     docker volume inspect "reduxstation_${vol}" >/dev/null 2>&1 || \
         docker volume create "reduxstation_${vol}"
 done

@@ -123,6 +123,13 @@ services:
     volumes:
       - demo_viewer_dist:/dist
 
+  website-builder:
+    build:
+      context: ./docker/website
+    restart: "no"
+    volumes:
+      - website_dist:/dist
+
   log-parser:
     image: ghcr.io/reduxstation/public-log-parser:latest
     restart: unless-stopped
@@ -178,6 +185,7 @@ services:
       - webmap_tiles:/srv/tiles:ro
       - webmap_site_dist:/srv/webmap-site:ro
       - demo_viewer_dist:/srv/demo-viewer:ro
+      - website_dist:/srv/website:ro
 
 volumes:
   mariadb_data:
@@ -204,3 +212,6 @@ volumes:
   demo_viewer_dist:
     external: true
     name: reduxstation_demo_viewer_dist
+  website_dist:
+    external: true
+    name: reduxstation_website_dist
