@@ -26,7 +26,13 @@ git fetch origin
 git sparse-checkout init --cone
 git sparse-checkout set "${SERVER}/" title_screens/
 git reset --hard origin/main
-# DO NOT add `git clean -fdx`. It would wipe operator-managed media.
+# Scoped clean: drop untracked files inside repo-managed dirs so that files
+# deleted upstream actually disappear from the live config. Never use
+# `git clean -fdx` (would wipe operator-managed media in jukebox_music/,
+# title_music/, reboot_themes/) or unscoped `git clean -fd` (would catch
+# top-level operator-uploaded items). Limit to dirs that are 100%
+# repo-managed.
+git clean -fd "${SERVER}/" title_screens/
 
 # Per-server overrides → top level
 for f in motd.txt config.txt hippiestation_config.txt dynamic.json policy.json \
