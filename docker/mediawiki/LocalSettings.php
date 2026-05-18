@@ -50,6 +50,16 @@ $wgShowDBErrorBacktrace = false;
 $wgShowSQLErrors        = false;
 $wgDevelopmentWarnings  = false;
 
+// Silence PHP-level deprecation/notice output to the browser. Without this,
+// an extension that uses a soon-to-be-removed MW API leaks an inline
+// "Deprecated: ..." snippet into the rendered page for every anonymous
+// viewer (we saw this with Extension:Tabs's REL1_42 build hitting
+// Parser::$tabsData). The deprecation IS still logged to stderr via
+// MWDebug for operators to see in container logs, just not surfaced
+// to readers.
+ini_set( 'display_errors', '0' );
+error_reporting( E_ALL & ~E_DEPRECATED & ~E_USER_DEPRECATED & ~E_NOTICE & ~E_USER_NOTICE & ~E_STRICT );
+
 // Force HTTPS. The Caddy in front of MW is the TLS terminator; tell MW the
 // scheme via X-Forwarded-Proto so wgServer-derived URLs come out https://.
 $wgUsePrivateIPs = false;
