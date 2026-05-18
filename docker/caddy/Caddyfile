@@ -1,4 +1,4 @@
-panel.reduxstation.com {
+tgs.reduxstation.com {
     reverse_proxy tgs:5000
 }
 

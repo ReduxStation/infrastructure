@@ -54,7 +54,7 @@ Grants the `ss13` user access to all three.
 
 ### 4. Pin BYOND to 516.1680 in the panel
 
-Open the panel hostname (default `panel.reduxstation.com`; the canonical Caddyfile reverse-proxies it to `tgs:5000`) and complete TGS first-run setup: create initial admin, create instance, set repo URL.
+Open the panel hostname (default `tgs.reduxstation.com`; the canonical Caddyfile reverse-proxies it to `tgs:5000`) and complete TGS first-run setup: create initial admin, create instance, set repo URL.
 
 In the **Engine** tab, install and activate **BYOND 516.1680**. `dependencies.sh` declares this exact build. Newer 516.x builds (1681+) have a regressed lexer that rejects integer-suffix CSS time units like `1500ms` inside DM multi-line strings, breaking `interface/stylesheet.dm` compilation.
 
@@ -97,7 +97,7 @@ If you want every merge to master to auto-deploy, configure four repository secr
 
 | Secret | Value |
 |---|---|
-| `TGS_URL` | Your TGS panel URL (e.g. `https://panel.reduxstation.com`) |
+| `TGS_URL` | Your TGS panel URL (e.g. `https://tgs.reduxstation.com`) |
 | `TGS_USERNAME` | Name of a TGS user with the perms below |
 | `TGS_PASSWORD` | Password for that user |
 | `TGS_INSTANCE_ID` | Numeric instance id (visible as `(N)` after the instance name in the panel header) |
