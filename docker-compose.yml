@@ -153,7 +153,7 @@ services:
       GAME_PORT: "1337"
       SERVER_IDENTIFIER: ${SERVER_SUBDIR:-owo}
       OUTPUT_PATH: /srv/output/serverinfo.json
-      POLL_INTERVAL: "4"
+      POLL_INTERVAL: "1"
     volumes:
       - type: volume
         source: tgs_instances
