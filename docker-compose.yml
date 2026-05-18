@@ -157,7 +157,10 @@ services:
       MEDIAWIKI_SITENAME: ${MEDIAWIKI_SITENAME:-ReduxStation Wiki}
       MEDIAWIKI_SERVER: ${MEDIAWIKI_SERVER:-https://wiki.reduxstation.com}
     volumes:
-      - ./docker/mediawiki/LocalSettings.php:/var/www/html/LocalSettings.php:ro
+      # LocalSettings.php is bind-mounted OUTSIDE /var/www/html. The
+      # entrypoint copies it into place after install.php (which refuses
+      # to run if LocalSettings.php already exists in the wiki root).
+      - ./docker/mediawiki/LocalSettings.php:/opt/redux-mw/LocalSettings.php:ro
       - mediawiki_images:/var/www/html/images
 
   log-parser:
