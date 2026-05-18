@@ -69,7 +69,8 @@ services:
 
   statbus:
     build:
-      context: ./docker/statbus
+      context: .
+      dockerfile: docker/statbus/Dockerfile
     restart: unless-stopped
     depends_on:
       mariadb: { condition: service_healthy }

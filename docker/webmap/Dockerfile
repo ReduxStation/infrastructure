@@ -41,14 +41,14 @@ RUN pip install --no-cache-dir Pillow
 COPY --from=dmm-builder /spacedmm/target/release/dmm-tools /usr/local/bin/dmm-tools
 
 # tile.py: slices each flat PNG into a Leaflet XYZ tile pyramid
-COPY docker/webmap/tile.py /tile.py
+COPY tile.py /tile.py
 
 # extract_objects.py: builds objects.json (BYOND-coord-keyed metadata) for
 # the interactive viewer at map.reduxstation.com
-COPY docker/webmap/extract_objects.py /extract_objects.py
+COPY extract_objects.py /extract_objects.py
 
 # render.sh: orchestrates dmm-tools → tile.py + extract_objects.py
-COPY docker/webmap/render.sh /render.sh
+COPY render.sh /render.sh
 RUN chmod +x /render.sh
 
 # Game source is mounted read-only at /src by docker-compose.
