@@ -4,7 +4,7 @@
 # end_datetime is recorded.
 #
 # Clears the active-round list in serverinfo.json so the public-log-parser
-# stops hiding this round's directory at logs.owo.fm.
+# stops hiding this round's directory at logs.reduxstation.com.
 #
 # TGS6 invokes custom event scripts as:
 #   <script> <game_dir> <param1> <param2> ...

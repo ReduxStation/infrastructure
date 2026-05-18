@@ -5,7 +5,7 @@
 # at https://github.com/ReduxStation/webmap so the viewer can ship updates
 # without rebuilding the game image.  This Dockerfile clones that repo, drops
 # in a pinned copy of Leaflet, and copies the result into a shared volume
-# that Caddy serves at webmap.owo.fm.
+# that Caddy serves at map.reduxstation.com.
 #
 # Bumping versions:
 #     LEAFLET_VERSION=1.9.4   <- change this and rebuild

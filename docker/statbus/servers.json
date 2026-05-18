@@ -3,10 +3,10 @@
     "port": 1337,
     "name": "HippieStation",
     "local_logs": "/srv/gamestatic/logs/",
-    "public_logs_url": "https://logs.owo.fm/",
-    "demo_viewer": "https://demo.owo.fm",
+    "public_logs_url": "https://logs.reduxstation.com/",
+    "demo_viewer": "https://demo.reduxstation.com",
     "webmap": {
-      "tiles": "https://tiles.owo.fm/hippiestation",
+      "tiles": "https://tiles.reduxstation.com/hippiestation",
       "main_z": 1,
       "z_levels": [1, 2, 3],
       "z_names": ["Station", "Lavaland", "CentCom"],

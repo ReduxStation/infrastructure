@@ -9,7 +9,7 @@ WORKDIR /build
 RUN git clone --depth=1 https://github.com/ReduxStation/demo-viewer.git .
 
 # Point the CNAME at our domain.
-RUN echo "demo.owo.fm" > CNAME
+RUN echo "demo.reduxstation.com" > CNAME
 
 # The text parser hardcodes the upstream Yogstation repo when fetching CSS/icons
 # from jsDelivr.  Repoint it to our game repository so icons load correctly.

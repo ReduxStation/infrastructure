@@ -1,15 +1,15 @@
-panel.owo.fm {
+panel.reduxstation.com {
     reverse_proxy tgs:5000
 }
 
-stats.owo.fm {
+stats.reduxstation.com {
     root * /var/www/html/public
 
     php_fastcgi statbus:9000
     file_server
 }
 
-logs.owo.fm {
+logs.reduxstation.com {
     root * /srv/logs/logs
 
     # Defence-in-depth path whitelist. Only requests that match the canonical
@@ -42,7 +42,7 @@ logs.owo.fm {
         respond 404
     }
 
-    # Allow the demo viewer (demo.owo.fm) to fetch demo.log files cross-origin.
+    # Allow the demo viewer (demo.reduxstation.com) to fetch demo.log files cross-origin.
     header Access-Control-Allow-Origin "*"
 }
 
@@ -58,7 +58,7 @@ logs.owo.fm {
     file_server
 }
 
-demo.owo.fm {
+demo.reduxstation.com {
     root * /srv/demo-viewer
     file_server
     header Access-Control-Allow-Origin "*"
@@ -70,7 +70,7 @@ demo.owo.fm {
 # which sets client.preload_rsc from config/external_rsc_urls.txt.
 # Only *.rsc paths are served; everything else 404s so the rest of the TGS
 # game directory is not exposed.
-rsc.owo.fm {
+rsc.reduxstation.com {
     root * /srv/tgs/ReduxStation/Game/Live
 
     @rsc path *.rsc
@@ -85,14 +85,14 @@ rsc.owo.fm {
     }
 }
 
-# Raw map tile pyramid (PNGs). Consumed by webmap.owo.fm and statbus.
-tiles.owo.fm {
+# Raw map tile pyramid (PNGs). Consumed by map.reduxstation.com and statbus.
+tiles.reduxstation.com {
     root * /srv/tiles
 
     # Tiles are immutable once rendered — browsers can cache for a week.
     header Cache-Control "public, max-age=604800, immutable"
 
-    # Allow cross-origin requests so webmap.owo.fm and stats.owo.fm can
+    # Allow cross-origin requests so map.reduxstation.com and stats.reduxstation.com can
     # load tiles from a different origin.
     header Access-Control-Allow-Origin "*"
 
@@ -104,9 +104,9 @@ tiles.owo.fm {
     }
 }
 
-# Interactive map viewer — Leaflet UI on top of tiles.owo.fm with hover-to-
+# Interactive map viewer — Leaflet UI on top of tiles.reduxstation.com with hover-to-
 # examine, click-to-pin, search, and category layer filters.
-webmap.owo.fm {
+map.reduxstation.com {
     root * /srv/webmap-site
     file_server
     try_files {path} /index.html

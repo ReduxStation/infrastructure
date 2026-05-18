@@ -54,7 +54,7 @@ Grants the `ss13` user access to all three.
 
 ### 4. Pin BYOND to 516.1680 in the panel
 
-Open the panel hostname (default `panel.owo.fm`; the canonical Caddyfile reverse-proxies it to `tgs:5000`) and complete TGS first-run setup: create initial admin, create instance, set repo URL.
+Open the panel hostname (default `panel.reduxstation.com`; the canonical Caddyfile reverse-proxies it to `tgs:5000`) and complete TGS first-run setup: create initial admin, create instance, set repo URL.
 
 In the **Engine** tab, install and activate **BYOND 516.1680**. `dependencies.sh` declares this exact build. Newer 516.x builds (1681+) have a regressed lexer that rejects integer-suffix CSS time units like `1500ms` inside DM multi-line strings, breaking `interface/stylesheet.dm` compilation.
 
@@ -97,7 +97,7 @@ If you want every merge to master to auto-deploy, configure four repository secr
 
 | Secret | Value |
 |---|---|
-| `TGS_URL` | Your TGS panel URL (e.g. `https://panel.owo.fm`) |
+| `TGS_URL` | Your TGS panel URL (e.g. `https://panel.reduxstation.com`) |
 | `TGS_USERNAME` | Name of a TGS user with the perms below |
 | `TGS_PASSWORD` | Password for that user |
 | `TGS_INSTANCE_ID` | Numeric instance id (visible as `(N)` after the instance name in the panel header) |
@@ -247,7 +247,7 @@ Fix:
 
 Same root cause as `log_write`: BYOND's dlopen chain did not find `libBSQL.so`. Same diagnosis (check `Game/Live/libBSQL.so` exists, `LD_LIBRARY_PATH` is set, no stale copy in `Byond/bin/`).
 
-### Logs at logs.owo.fm 404 even though the game is writing round files
+### Logs at logs.reduxstation.com 404 even though the game is writing round files
 
 The active game directory's `data/` is not resolving back to the persistent volume. Three things to check:
 

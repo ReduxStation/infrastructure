@@ -6,7 +6,7 @@
 # Writes the active round id into a serverinfo.json file on the game_data
 # volume. The public-log-parser polls this file via caddy:8081/serverinfo.json
 # every 60 seconds and 404s any /YYYY/MM/DD/round-N/ path whose round_id is
-# in the list, so the in-progress round stays hidden from logs.owo.fm.
+# in the list, so the in-progress round stays hidden from logs.reduxstation.com.
 #
 # TGS6 invokes custom event scripts as:
 #   <script> <game_dir> <param1> <param2> ...

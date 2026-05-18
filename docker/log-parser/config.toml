@@ -1,4 +1,4 @@
-# tg-public-log-parser configuration for the owo.fm deployment.
+# tg-public-log-parser configuration for the reduxstation.com deployment.
 # Mounted into the log-parser container at /app/config.toml.
 
 # Bind on all interfaces inside the docker network so caddy can reverse-proxy.
