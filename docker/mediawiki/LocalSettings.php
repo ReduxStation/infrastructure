@@ -107,16 +107,26 @@ $wgEnableEmail = false;
 $wgEnableUserEmail = false;
 
 // ─── Uploads ──────────────────────────────────────────────────────────────
-// Images are imported from the scrape, but new on-wiki uploads stay off
-// until an operator opts in. Flip $wgEnableUploads to true and grant
-// 'upload' permission to a trusted group when ready.
-$wgEnableUploads = false;
+// Uploads subsystem is ON so importImages.php (and Special:Upload for
+// admins) can write into /var/www/html/images. Permissions are still
+// locked down per the group-permissions block above: regular 'user'
+// group cannot upload; only sysop and the implicit maintenance CLI
+// (which bypasses user-permission checks via Maintenance::doDBUpdates
+// style entrypoints) get write access.
+$wgEnableUploads = true;
 $wgUploadDirectory = '/var/www/html/images';
 $wgUploadPath = '/images';
 $wgAllowImageMoving = true;
 $wgFileExtensions = [ 'png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'ogg' ];
 $wgStrictFileExtensions = true;
 $wgVerifyMimeType = true;
+// Explicit per-group upload permissions. 'user' (logged-in) cannot upload;
+// only 'sysop' can. This pairs with $wgEnableUploads=true to keep the
+// surface area minimal.
+$wgGroupPermissions['user']['upload']    = false;
+$wgGroupPermissions['user']['reupload']  = false;
+$wgGroupPermissions['sysop']['upload']   = true;
+$wgGroupPermissions['sysop']['reupload'] = true;
 
 // ─── Caching ──────────────────────────────────────────────────────────────
 $wgMainCacheType    = CACHE_ACCEL;
