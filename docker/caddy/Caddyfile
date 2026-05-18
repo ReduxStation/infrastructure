@@ -198,11 +198,15 @@ tiles.reduxstation.com {
 # Interactive map viewer — Leaflet UI on top of tiles.reduxstation.com with hover-to-
 # examine, click-to-pin, search, and category layer filters.
 map.reduxstation.com {
+    # service_favicon must come first so its handle @favicon grabs
+    # /favicon.ico before the SPA try_files rewrites it to /index.html.
     import service_favicon webmap
 
-    root * /srv/webmap-site
-    file_server
-    try_files {path} /index.html
+    handle {
+        root * /srv/webmap-site
+        try_files {path} /index.html
+        file_server
+    }
 
     handle_errors {
         respond "{http.error.status_code} {http.error.status_text}" {http.error.status_code}
