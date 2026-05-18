@@ -151,6 +151,40 @@ $wgScribuntoEngineConf['luastandalone']['luaPath'] = '/usr/bin/lua5.1';
 // (Box Station, Meta Station, Delta Station, etc).
 wfLoadExtension( 'Tabs' );
 
+// ─── Pixel-art rendering ──────────────────────────────────────────────────
+// SS13 sprites are 32x32 pixel art. MediaWiki's default thumbnail
+// generation (ImageMagick + Lanczos filter) blurs them when upscaled
+// in infoboxes etc. Two coordinated changes fix it:
+//
+//   1. $wgCustomConvertCommand — forces ImageMagick to use the 'point'
+//      filter (nearest-neighbor) when generating thumbnails for raster
+//      images. The %s placeholders are MW's standard convert-template
+//      substitution markers: input file, width, height, output file.
+//      We add `-filter point -interpolate Integer` to preserve sharp
+//      pixel boundaries on upscale, and keep the standard `-thumbnail`
+//      operator for downscale efficiency.
+//
+//   2. BeforePageDisplay hook that adds inline CSS so any time the
+//      browser scales an image (e.g. retina-density downsample or
+//      explicit width override that doesn't match a generated thumb),
+//      it uses nearest-neighbor too. Belt and suspenders.
+$wgUseImageMagick = true;
+$wgImageMagickConvertCommand = '/usr/bin/convert';
+$wgCustomConvertCommand = '/usr/bin/convert %s -resize %wx%h -filter point -interpolate Integer %d';
+
+$wgHooks['BeforePageDisplay'][] = function ( $out, $skin ) {
+    $out->addInlineStyle(
+        '.mw-parser-output img,' .
+        '.thumbinner img,' .
+        '.gallerybox img,' .
+        '.image img {' .
+            'image-rendering: pixelated;' .
+            'image-rendering: -moz-crisp-edges;' .
+            'image-rendering: crisp-edges;' .
+        '}'
+    );
+};
+
 // Disable the visual editor by default — it needs Parsoid as an external
 // service and the scraped wiki is wikitext-native anyway. Re-enable once
 // Parsoid is set up if you want WYSIWYG.
