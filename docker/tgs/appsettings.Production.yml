@@ -14,3 +14,9 @@ Kestrel:
   Endpoints:
     Http:
       Url: "http://0.0.0.0:5000"
+
+# Enable the bundled web control panel at /app/ (served by TGS from
+# /app/lib/Default/wwwroot/). Reached at https://tgs.reduxstation.com/app/.
+ControlPanel:
+  Enable: true
+  PublicPath: "/app/"
