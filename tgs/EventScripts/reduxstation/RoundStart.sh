@@ -36,6 +36,6 @@ fi
 OUT="$GAME_DIR/data/serverinfo.json"
 mkdir -p "$(dirname "$OUT")"
 cat > "$OUT" <<JSON
-{"servers":[{"data":{"round_id":"${ROUND_ID}","identifier":"owo"}}]}
+{"servers":[{"data":{"round_id":"${ROUND_ID}","identifier":"reduxstation"}}]}
 JSON
 echo "RoundStart: wrote round_id ${ROUND_ID} to ${OUT}"

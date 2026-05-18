@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-. /etc/tgs-EventScripts.d/resurgencestation/globals.env
+. /etc/tgs-EventScripts.d/reduxstation/globals.env
 . "$(dirname "$0")/parse-server.sh"
 
 TARGET="${TGS_INSTANCE_ROOT}/Configuration/GameStaticFiles/config"

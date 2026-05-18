@@ -1,16 +1,16 @@
-# ResurgenceStation Docker Compose stack.
-# Volume namespace pinned via `name: resurgencestation`.
-# Secrets live at /etc/resurgence/secrets/*; Compose mounts them via `secrets:`.
+# ReduxStation Docker Compose stack.
+# Volume namespace pinned via `name: reduxstation`.
+# Secrets live at /etc/redux/secrets/*; Compose mounts them via `secrets:`.
 # Non-secret cross-cutting vars come from globals.env (symlinked to .env).
 # Host-only secret overrides come from .env.local (gitignored).
 
-name: resurgencestation
+name: reduxstation
 
 secrets:
   mysql_root_password:
-    file: /etc/resurgence/secrets/mysql_root_password
+    file: /etc/redux/secrets/mysql_root_password
   mysql_password:
-    file: /etc/resurgence/secrets/mysql_password
+    file: /etc/redux/secrets/mysql_password
 
 services:
   mariadb:
@@ -56,16 +56,16 @@ services:
       Database__ConnectionString: "Server=mariadb;Port=3306;Database=tgs;Uid=ss13;Pwd=${MYSQL_PASSWORD:?set MYSQL_PASSWORD in .env.local};"
       Database__DatabaseType: MariaDB
       Database__ServerVersion: "10.11.0"
-      LD_LIBRARY_PATH: /tgs_instances/ResurgenceStation/Game/Live
-      # Load EventScripts from /etc/tgs-EventScripts.d/resurgencestation/ for all instances
+      LD_LIBRARY_PATH: /tgs_instances/ReduxStation/Game/Live
+      # Load EventScripts from /etc/tgs-EventScripts.d/reduxstation/ for all instances
       # — eliminates the per-instance Configuration/EventScripts/ symlink ritual.
-      General__AdditionalEventScriptsDirectories__0: /etc/tgs-EventScripts.d/resurgencestation
+      General__AdditionalEventScriptsDirectories__0: /etc/tgs-EventScripts.d/reduxstation
     volumes:
       - ./docker/tgs/appsettings.Production.yml:/config_data/appsettings.Production.yml:ro
       - tgs_instances:/tgs_instances
       - tgs_logs:/tgs_logs
-      - /etc/tgs-EventScripts.d/resurgencestation:/etc/tgs-EventScripts.d/resurgencestation:ro
-      - /etc/resurgence/secrets:/etc/resurgence/secrets:ro
+      - /etc/tgs-EventScripts.d/reduxstation:/etc/tgs-EventScripts.d/reduxstation:ro
+      - /etc/redux/secrets:/etc/redux/secrets:ro
 
   statbus:
     build:
@@ -87,8 +87,8 @@ services:
       ALT_DB_PASSWORD: ${MYSQL_PASSWORD:?}
       ALT_DB_HOST: mariadb
       ALT_DB_PORT: "3306"
-      APP: "${STATBUS_APP:-ResurgenceStation Statbus}"
-      GITHUB: "${GITHUB:-ResurgenceStation/ResurgenceStation}"
+      APP: "${STATBUS_APP:-ReduxStation Statbus}"
+      GITHUB: "${GITHUB:-ReduxStation/ReduxStation}"
       DEBUG: "FALSE"
       DISPLAY_ERRORS: "FALSE"
     volumes:
@@ -98,14 +98,14 @@ services:
         target: /srv/gamestatic
         read_only: true
         volume:
-          subpath: ResurgenceStation/Configuration/GameStaticFiles/data
+          subpath: ReduxStation/Configuration/GameStaticFiles/data
 
   webmap-renderer:
     build:
       context: ./docker/webmap
     restart: "no"
     volumes:
-      - ../game:/src:ro          # operator sibling clone of game repo at /srv/resurgence/game
+      - ../game:/src:ro          # operator sibling clone of game repo at /srv/redux/game
       - webmap_tiles:/tiles
 
   webmap-site-builder:
@@ -123,7 +123,7 @@ services:
       - demo_viewer_dist:/dist
 
   log-parser:
-    image: ghcr.io/resurgencestation/public-log-parser:latest
+    image: ghcr.io/reduxstation/public-log-parser:latest
     restart: unless-stopped
     depends_on: [caddy]
     volumes:
@@ -133,7 +133,7 @@ services:
         target: /logs
         read_only: true
         volume:
-          subpath: ResurgenceStation/Configuration/GameStaticFiles/data
+          subpath: ReduxStation/Configuration/GameStaticFiles/data
 
   serverinfo-updater:
     build:
@@ -151,7 +151,7 @@ services:
         source: tgs_instances
         target: /srv/output
         volume:
-          subpath: ResurgenceStation/Configuration/GameStaticFiles/data
+          subpath: ReduxStation/Configuration/GameStaticFiles/data
 
   caddy:
     build:
@@ -172,7 +172,7 @@ services:
         target: /srv/logs
         read_only: true
         volume:
-          subpath: ResurgenceStation/Configuration/GameStaticFiles/data
+          subpath: ReduxStation/Configuration/GameStaticFiles/data
       - tgs_instances:/srv/tgs:ro
       - webmap_tiles:/srv/tiles:ro
       - webmap_site_dist:/srv/webmap-site:ro
@@ -181,25 +181,25 @@ services:
 volumes:
   mariadb_data:
     external: true
-    name: resurgencestation_mariadb_data
+    name: reduxstation_mariadb_data
   tgs_instances:
     external: true
-    name: resurgencestation_tgs_instances
+    name: reduxstation_tgs_instances
   tgs_logs:
     external: true
-    name: resurgencestation_tgs_logs
+    name: reduxstation_tgs_logs
   caddy_data:
     external: true
-    name: resurgencestation_caddy_data
+    name: reduxstation_caddy_data
   caddy_certs:
     external: true
-    name: resurgencestation_caddy_certs
+    name: reduxstation_caddy_certs
   webmap_tiles:
     external: true
-    name: resurgencestation_webmap_tiles
+    name: reduxstation_webmap_tiles
   webmap_site_dist:
     external: true
-    name: resurgencestation_webmap_site_dist
+    name: reduxstation_webmap_site_dist
   demo_viewer_dist:
     external: true
-    name: resurgencestation_demo_viewer_dist
+    name: reduxstation_demo_viewer_dist

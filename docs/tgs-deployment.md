@@ -17,8 +17,8 @@ After provisioning a host with Docker Engine + Compose v2, work through the step
 ### 1. Clone the repo and provision the env file
 
 ```bash
-git clone https://github.com/ResurgenceStation/ResurgenceStation.git
-cd ResurgenceStation
+git clone https://github.com/ReduxStation/ReduxStation.git
+cd ReduxStation
 cp .env.example .env
 $EDITOR .env  # set MYSQL_ROOT_PASSWORD and MYSQL_PASSWORD to strong values
 ```
@@ -127,7 +127,7 @@ where `$ORIGIN` is the BYOND `bin/` dir. The `$LD_LIBRARY_PATH` on the right-han
 
 ```yaml
 environment:
-  LD_LIBRARY_PATH: /tgs_instances/ResurgenceStation/Game/Live
+  LD_LIBRARY_PATH: /tgs_instances/ReduxStation/Game/Live
 ```
 
 So DreamDaemon's effective search path is `BYOND/bin/:Game/Live/`. BYOND finds the literal `rust_g.so` file (along with `libBSQL.so` and `libquickwrite.so`) in `Game/Live/` via this path. No scatter script required. Every deploy refreshes the lib contents automatically because TGS copies the repo source tree (including the committed libs) into `Game/Live/` on every compile.
@@ -141,7 +141,7 @@ TGS-6 has a native mechanism for files that persist across deploys: `Configurati
 For this stack, the persistent `game_data` Docker volume is mounted **directly at the TGS GameStaticFiles path** inside the tgs container, in `docker-compose.yml`:
 
 ```yaml
-- game_data:/tgs_instances/ResurgenceStation/Configuration/GameStaticFiles/data
+- game_data:/tgs_instances/ReduxStation/Configuration/GameStaticFiles/data
 ```
 
 This matches the upstream tgstation `RUNNING_A_SERVER.md` recipe ("data should be initially created as an empty directory. The game stores persistent data here"). TGS sees `Configuration/GameStaticFiles/data/`, hard-links its contents into `Game/Live/data/` on every deploy. The game writes to `data/foo` relative to its CWD (which is `Game/Live/`), and the write resolves through the hard-link back to the persistent volume.
@@ -195,12 +195,12 @@ If you are upgrading from a checkout that still had the old `PostCompile.sh` / `
 3. Remove any stale `rust_g` copies from `Byond/<active_version>/byond/bin/` left over from the old scatter (otherwise BYOND finds the stale `BYOND/bin/` copy first and never reaches the fresh `Game/Live/` copy):
    ```bash
    docker exec <tgs_container> sh -c \
-     'ACTIVE=$(cat /tgs_instances/ResurgenceStation/Byond/ActiveVersion.txt); \
-      rm -f /tgs_instances/ResurgenceStation/Byond/$ACTIVE/byond/bin/rust_g \
-            /tgs_instances/ResurgenceStation/Byond/$ACTIVE/byond/bin/rust_g.so \
-            /tgs_instances/ResurgenceStation/Byond/$ACTIVE/byond/bin/librust_g.so \
-            /tgs_instances/ResurgenceStation/Byond/$ACTIVE/byond/bin/libBSQL.so \
-            /tgs_instances/ResurgenceStation/Byond/$ACTIVE/byond/bin/libquickwrite.so'
+     'ACTIVE=$(cat /tgs_instances/ReduxStation/Byond/ActiveVersion.txt); \
+      rm -f /tgs_instances/ReduxStation/Byond/$ACTIVE/byond/bin/rust_g \
+            /tgs_instances/ReduxStation/Byond/$ACTIVE/byond/bin/rust_g.so \
+            /tgs_instances/ReduxStation/Byond/$ACTIVE/byond/bin/librust_g.so \
+            /tgs_instances/ReduxStation/Byond/$ACTIVE/byond/bin/libBSQL.so \
+            /tgs_instances/ReduxStation/Byond/$ACTIVE/byond/bin/libquickwrite.so'
    ```
 4. `docker compose up -d --force-recreate tgs` to pick up the `LD_LIBRARY_PATH` env and the new mount at `Configuration/GameStaticFiles/data`.
 5. Trigger one fresh deploy from the panel. From this point on, every change to `tools/tgs_scripts/*.sh` or any committed lib propagates with the next compile.
@@ -225,11 +225,11 @@ Diagnose:
 
 ```bash
 # 1. Is the lib in Game/Live where TGS deployed it?
-docker exec <tgs_container> ls -la /tgs_instances/ResurgenceStation/Game/Live/rust_g.so
+docker exec <tgs_container> ls -la /tgs_instances/ReduxStation/Game/Live/rust_g.so
 
 # 2. Is LD_LIBRARY_PATH set on the tgs container env?
 docker exec <tgs_container> env | grep LD_LIBRARY_PATH
-# Should print: LD_LIBRARY_PATH=/tgs_instances/ResurgenceStation/Game/Live
+# Should print: LD_LIBRARY_PATH=/tgs_instances/ReduxStation/Game/Live
 
 # 3. What is DreamDaemon's effective search path? /proc/<DD_PID>/maps tells you
 # which rust_g.so the running game actually loaded.
@@ -255,12 +255,12 @@ The active game directory's `data/` is not resolving back to the persistent volu
    ```bash
    docker inspect <tgs_container> | jq '.[0].Mounts[] | select(.Destination | contains("GameStaticFiles"))'
    ```
-   Destination should be `/tgs_instances/ResurgenceStation/Configuration/GameStaticFiles/data`.
+   Destination should be `/tgs_instances/ReduxStation/Configuration/GameStaticFiles/data`.
 2. Confirm TGS hard-linked it on the latest deploy:
    ```bash
    docker exec <tgs_container> stat -c '%i' \
-     /tgs_instances/ResurgenceStation/Game/Live/data/ \
-     /tgs_instances/ResurgenceStation/Configuration/GameStaticFiles/data/
+     /tgs_instances/ReduxStation/Game/Live/data/ \
+     /tgs_instances/ReduxStation/Configuration/GameStaticFiles/data/
    ```
    The two inodes should match (or both contain the same files at matching inodes for nested entries).
 3. If the parser sees a stale `serverinfo.json`, the `RoundStart.sh` wrapper did not fire or the real script under `tools/tgs_scripts/RoundStart.sh` could not write. Tail the TGS instance log for the event:

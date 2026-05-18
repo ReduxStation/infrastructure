@@ -2,7 +2,7 @@
 set -euo pipefail
 . "$(dirname "$0")/../globals.env"
 
-SRC="$(dirname "$0")/../tgs/EventScripts/resurgencestation"
+SRC="$(dirname "$0")/../tgs/EventScripts/reduxstation"
 sudo mkdir -p "${TGS_EVENTSCRIPTS_DIR}"
 sudo cp -f "${SRC}"/*.sh "${TGS_EVENTSCRIPTS_DIR}/"
 sudo cp -f "$(dirname "$0")/../globals.env" "${TGS_EVENTSCRIPTS_DIR}/"

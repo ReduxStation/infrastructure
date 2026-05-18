@@ -71,7 +71,7 @@ demo.owo.fm {
 # Only *.rsc paths are served; everything else 404s so the rest of the TGS
 # game directory is not exposed.
 rsc.owo.fm {
-    root * /srv/tgs/ResurgenceStation/Game/Live
+    root * /srv/tgs/ReduxStation/Game/Live
 
     @rsc path *.rsc
     handle @rsc {

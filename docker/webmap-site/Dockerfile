@@ -2,7 +2,7 @@
 # Webmap interactive site builder
 #
 # The page source (index.html, main.js, style.css) lives in a separate repo
-# at https://github.com/ResurgenceStation/webmap so the viewer can ship updates
+# at https://github.com/ReduxStation/webmap so the viewer can ship updates
 # without rebuilding the game image.  This Dockerfile clones that repo, drops
 # in a pinned copy of Leaflet, and copies the result into a shared volume
 # that Caddy serves at webmap.owo.fm.
@@ -15,7 +15,7 @@
 FROM alpine:3.19 AS deps
 
 ARG LEAFLET_VERSION=1.9.4
-ARG WEBMAP_REPO=https://github.com/ResurgenceStation/webmap.git
+ARG WEBMAP_REPO=https://github.com/ReduxStation/webmap.git
 ARG WEBMAP_REF=main
 
 RUN apk add --no-cache git wget ca-certificates

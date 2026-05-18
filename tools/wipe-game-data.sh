@@ -50,7 +50,7 @@ echo "Targeting mariadb container: $MARIADB"
 # approach. Falls back to the canonical name if the pattern misses.
 GAME_VOL="$(docker volume ls --filter "name=game_data" --format '{{.Name}}' | head -1)"
 if [[ -z "$GAME_VOL" ]]; then
-  GAME_VOL="resurgencestation_game_data"
+  GAME_VOL="reduxstation_game_data"
 fi
 echo "Targeting game_data volume: $GAME_VOL"
 
