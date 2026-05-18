@@ -25,7 +25,18 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         lua5.1 \
         netcat-openbsd \
+        git \
     && rm -rf /var/lib/apt/lists/*
+
+# Extensions not bundled with mediawiki:1.42.1 that tg's wiki content depends
+# on. Each is git-cloned at the REL1_42 branch so it stays in lockstep with
+# the MW release.
+#
+#   Tabs — provides <tabs><tab name="..."> syntax used by Box Station etc.
+ARG MW_BRANCH=REL1_42
+RUN git clone --depth=1 --branch ${MW_BRANCH} \
+        https://gerrit.wikimedia.org/r/mediawiki/extensions/Tabs \
+        /var/www/html/extensions/Tabs
 
 COPY entrypoint.sh /usr/local/bin/redux-mw-entrypoint
 RUN chmod +x /usr/local/bin/redux-mw-entrypoint

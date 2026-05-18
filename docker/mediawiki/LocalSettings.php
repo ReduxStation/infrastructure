@@ -126,6 +126,11 @@ wfLoadExtension( 'Scribunto' );          // {{#invoke:Lua}} modules
 $wgScribuntoDefaultEngine = 'luastandalone';
 $wgScribuntoEngineConf['luastandalone']['luaPath'] = '/usr/bin/lua5.1';
 
+// Not bundled with mediawiki:1.42.1 — installed by docker/mediawiki/Dockerfile.
+// Tabs provides <tabs><tab name="..."> tags used by tg's map-variant pages
+// (Box Station, Meta Station, Delta Station, etc).
+wfLoadExtension( 'Tabs' );
+
 // Disable the visual editor by default — it needs Parsoid as an external
 // service and the scraped wiki is wikitext-native anyway. Re-enable once
 // Parsoid is set up if you want WYSIWYG.
