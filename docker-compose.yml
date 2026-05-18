@@ -140,13 +140,20 @@ services:
       MEDIAWIKI_DB_HOST: mariadb
       MEDIAWIKI_DB_NAME: mediawiki
       MEDIAWIKI_DB_USER: ss13
-      MEDIAWIKI_DB_PASSWORD: ${MYSQL_PASSWORD:?set MYSQL_PASSWORD in .env.local}
+      # MYSQL_PASSWORD is shared with the rest of the stack and IS required
+      # at compose validate (tgs, statbus also use it). Empty default here
+      # so an unset MYSQL_PASSWORD doesn't block unrelated compose actions
+      # (e.g. rebuilding website-builder); the mediawiki entrypoint will
+      # fail-fast if it sees an empty value.
+      MEDIAWIKI_DB_PASSWORD: ${MYSQL_PASSWORD:-}
       MEDIAWIKI_ADMIN_USER: ${MEDIAWIKI_ADMIN_USER:-redux-admin}
-      MEDIAWIKI_ADMIN_PASSWORD: ${MEDIAWIKI_ADMIN_PASSWORD:?set MEDIAWIKI_ADMIN_PASSWORD in .env.local — first-run only, change via Special:ChangePassword after}
-      # Both keys must be set in .env.local before first start. Treat them
-      # as long-lived secrets: rotation invalidates sessions / installer.
-      MEDIAWIKI_SECRET_KEY: ${MEDIAWIKI_SECRET_KEY:?set MEDIAWIKI_SECRET_KEY in .env.local (openssl rand -hex 32)}
-      MEDIAWIKI_UPGRADE_KEY: ${MEDIAWIKI_UPGRADE_KEY:?set MEDIAWIKI_UPGRADE_KEY in .env.local (openssl rand -hex 16)}
+      # These four mediawiki-only secrets default to empty at compose validate
+      # so unrelated services can be (re)built and (re)created without them.
+      # The mediawiki entrypoint refuses to start if any are empty, and
+      # LocalSettings.php refuses to load if MEDIAWIKI_SECRET_KEY is empty.
+      MEDIAWIKI_ADMIN_PASSWORD: ${MEDIAWIKI_ADMIN_PASSWORD:-}
+      MEDIAWIKI_SECRET_KEY: ${MEDIAWIKI_SECRET_KEY:-}
+      MEDIAWIKI_UPGRADE_KEY: ${MEDIAWIKI_UPGRADE_KEY:-}
       MEDIAWIKI_SITENAME: ${MEDIAWIKI_SITENAME:-ReduxStation Wiki}
       MEDIAWIKI_SERVER: ${MEDIAWIKI_SERVER:-https://wiki.reduxstation.com}
     volumes:
