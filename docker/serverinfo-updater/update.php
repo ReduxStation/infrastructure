@@ -38,24 +38,63 @@ function byond_query(string $addr, int $port, string $query, int $timeout_s): ?s
         $sent += $w;
     }
 
-    $response = @stream_get_contents($sock, 65535);
-    fclose($sock);
-
-    if ($response === false || strlen($response) < 5) {
-        return null;
-    }
+    // Read EXACTLY the bytes BYOND sends, no more. The previous implementation
+    // used stream_get_contents($sock, 65535) which has to wait for EOF (which
+    // BYOND never sends) or for the 65535-byte limit (which never fills);
+    // every poll was hitting the 2-second stream_set_timeout fallback, pinning
+    // the loop at ~3s/cycle no matter what POLL_INTERVAL was set to. Reading
+    // the 4-byte header first to learn the exact body length lets us close
+    // the socket the moment the payload is in hand. Drops the cycle from
+    // ~3.1s to roughly POLL_INTERVAL + a few ms.
+    //
     // Response: [0x00] [0x83] [size 2B big-endian] [type 1B] [payload size-1 bytes]
-    if ($response[0] !== "\x00" || $response[1] !== "\x83") {
+    $header = read_n_bytes($sock, 4, $timeout_s);
+    if ($header === null || $header[0] !== "\x00" || $header[1] !== "\x83") {
+        fclose($sock);
         return null;
     }
-    $size_unpacked = unpack('n', $response[2] . $response[3]);
-    $size = $size_unpacked[1] - 1;
-    $type = $response[4];
+    $size_unpacked = unpack('n', $header[2] . $header[3]);
+    $body_len = $size_unpacked[1]; // type byte + payload
+    $body = read_n_bytes($sock, $body_len, $timeout_s);
+    fclose($sock);
+    if ($body === null || strlen($body) < 1) {
+        return null;
+    }
+    $type = $body[0];
     if ($type !== "\x06") {
         // 0x06 = ASCII string. 0x2a = float. Status returns a string for us.
         return null;
     }
-    return substr($response, 5, $size);
+    // body[1 .. body_len-1] is the payload; trim trailing null terminator.
+    return substr($body, 1, $body_len - 2);
+}
+
+function read_n_bytes($sock, int $n, int $timeout_s): ?string {
+    $buf = '';
+    $deadline = microtime(true) + $timeout_s;
+    while (strlen($buf) < $n) {
+        $remaining = $n - strlen($buf);
+        $chunk = @fread($sock, $remaining);
+        if ($chunk === false) {
+            return null;
+        }
+        if ($chunk === '') {
+            // Either EOF or transient empty read. Check stream metadata for
+            // timeout, otherwise give up if no progress for the deadline.
+            $meta = stream_get_meta_data($sock);
+            if (!empty($meta['timed_out']) || !empty($meta['eof'])) {
+                return null;
+            }
+            if (microtime(true) >= $deadline) {
+                return null;
+            }
+            // Tiny yield to avoid a hot loop.
+            usleep(1000);
+            continue;
+        }
+        $buf .= $chunk;
+    }
+    return $buf;
 }
 
 function parse_status(string $raw): array {
