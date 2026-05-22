@@ -11,6 +11,8 @@ secrets:
     file: /etc/redux/secrets/mysql_root_password
   mysql_password:
     file: /etc/redux/secrets/mysql_password
+  tts_token:
+    file: /etc/redux/secrets/tts_token
 
 services:
   mariadb:
@@ -193,6 +195,27 @@ services:
         target: /srv/output
         volume:
           subpath: ReduxStation/Configuration/GameStaticFiles/data
+
+  tts:
+    # Piper-backed TTS gateway. Source at https://github.com/ReduxStation/tts.
+    # The game container (tgs) reaches it as http://tts:5500 via docker DNS,
+    # matching the TTS_HTTP_URL value in the live config repo.
+    # No depends_on on tgs side: SStts gracefully disables itself if the
+    # gateway is unreachable, and admins can reconnect with a verb.
+    image: ghcr.io/reduxstation/tts:latest
+    restart: unless-stopped
+    environment:
+      TTS_AUTHORIZATION_TOKEN_FILE: /run/secrets/tts_token
+    secrets:
+      - tts_token
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:5500/health-check"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 30s
+    cpus: "8"
+    mem_limit: 4g
 
   caddy:
     build:
